@@ -150,11 +150,26 @@ print(channel)
 Lists available channels on the NVR.
 
 ```python
+import cv2
 from app.config.config import AppConfig
-
+from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 cfg = AppConfig()
 
-ip = cfg.get("NVR", "IP")
+ip = cfg.get("NVR","IP")
+port = cfg.get("NVR", "PORT")
+username = cfg.get("NVR", "USERNAME")
+password = cfg.get("NVR", "PASSWORD")
+
+hik = HikvisionSDK(
+    nvrs=[{
+        "ip": ip,
+        "port": port,
+        "username": username,
+        "password": password
+    }]
+)
+
+print("Session established.")
 
 hik.scan_channels(ip, 1, 64)
 ```
@@ -167,14 +182,25 @@ Display live video frames from a camera channel.
 
 ```python
 import cv2
-
 from app.config.config import AppConfig
-
+from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 cfg = AppConfig()
 
-ip = cfg.get("NVR", "IP")
+ip = cfg.get("NVR","IP")
+port = cfg.get("NVR", "PORT")
+username = cfg.get("NVR", "USERNAME")
+password = cfg.get("NVR", "PASSWORD")
 
-hik.scan_channels(ip, 1, 64)
+hik = HikvisionSDK(
+    nvrs=[{
+        "ip": ip,
+        "port": port,
+        "username": username,
+        "password": password
+    }]
+)
+
+print("Session established.")
 
 for frame in hik.live_stream(ip, 33):
 
@@ -196,9 +222,28 @@ Captures a frame directly into a NumPy array without saving to disk.
 
 ```python
 import cv2
+from app.config.config import AppConfig
+from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
+cfg = AppConfig()
+
+ip = cfg.get("NVR","IP")
+port = cfg.get("NVR", "PORT")
+username = cfg.get("NVR", "USERNAME")
+password = cfg.get("NVR", "PASSWORD")
+
+hik = HikvisionSDK(
+    nvrs=[{
+        "ip": ip,
+        "port": port,
+        "username": username,
+        "password": password
+    }]
+)
+
+print("Session established.")
 
 ret, frame = hik.capture_frame_buffer(
-    nvr_ip="192.168.100.10",
+    nvr_ip=ip,
     channel=33,
 )
 
@@ -221,9 +266,28 @@ Captures a JPEG image using the SDK and loads it into memory.
 
 ```python
 import cv2
+from app.config.config import AppConfig
+from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
+cfg = AppConfig()
+
+ip = cfg.get("NVR","IP")
+port = cfg.get("NVR", "PORT")
+username = cfg.get("NVR", "USERNAME")
+password = cfg.get("NVR", "PASSWORD")
+
+hik = HikvisionSDK(
+    nvrs=[{
+        "ip": ip,
+        "port": port,
+        "username": username,
+        "password": password
+    }]
+)
+
+print("Session established.")
 
 ret, frame = hik.capture_frame_file(
-    nvr_ip="192.168.100.10",
+    nvr_ip=ip,
     channel=33,
 )
 
@@ -246,13 +310,13 @@ The SDK automatically manages independent sessions for multiple NVRs.
 
 ```python
 hik.capture_frame_file(
-    nvr_ip="192.168.100.10",
+    nvr_ip=ip_1,
     channel=5,
 )
 
 hik.capture_frame_file(
-    nvr_ip="192.168.200.20",
-    channel=12,
+    nvr_ip=ip_2,
+    channel=5,
 )
 ```
 
@@ -261,29 +325,30 @@ Each NVR maintains:
 * Independent login session
 * Session reuse
 * Thread-safe capture
-* Automatic reconnect (if implemented)
+* Automatic reconnect
 
 ---
 
 # Typical AI Pipeline
 
 ```text
-NVR
-   │
-   ▼
-Login Once
-   │
-   ▼
-Session Cache
-   │
-   ├───────────────┐
-   │               │
-Capture        Live Stream
-   │               │
-   ▼               ▼
-OpenCV Frame   NumPy Frame
-        │
-        ▼
+               NVR
+                │
+                ▼
+            Login Once
+                │
+                ▼
+            Session Cache
+                │
+        ├───────────────┐
+        │               │
+    Capture        Live Stream
+        │               │
+        ▼               ▼
+    OpenCV Frame   NumPy Frame
+        ├───────│───────│
+                │
+                ▼      
 YOLO / OCR / Face Recognition / AI Models
 ```
 

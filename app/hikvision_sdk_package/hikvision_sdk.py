@@ -837,7 +837,18 @@ class HikvisionSDK:
 #           NVR PASSWORD: {password}\n
 #           """)
 
-#     hik.scan_channels("192.168.100.10", 1, 64)
+#     hik = HikvisionSDK(
+#         nvrs=[{
+#             "ip": ip,
+#             "port": port,
+#             "username": username,
+#             "password": password
+#         }]
+#     )
+
+#     print("Session established.")
+
+#     hik.scan_channels(ip, 1, 64)
 
 
 # ------------< LIVE VIEW / REAL PLAY TESTS >-----------------
@@ -858,8 +869,19 @@ class HikvisionSDK:
 #           NVR PASSWORD: {password}\n
 #           """)
 
-#     hik.scan_channels("192.168.100.10", 1, 64)
-#     for frame in hik.live_stream("192.168.100.10", 33):
+#     hik = HikvisionSDK(
+#         nvrs=[{
+#             "ip": ip,
+#             "port": port,
+#             "username": username,
+#             "password": password
+#         }]
+#     )
+
+#     print("Session established.")
+
+#     hik.scan_channels(ip, 1, 64)
+#     for frame in hik.live_stream(ip, 33):
 #         cv2.imshow("live", frame)
 #         # waitKey() is required for imshow to actually paint/refresh the
 #         # window and process its message queue — without it the window
@@ -887,9 +909,19 @@ class HikvisionSDK:
 #           NVR USERNAME: {username}\n
 #           NVR PASSWORD: {password}\n
 #           """)
+
+#     hik = HikvisionSDK(
+#         nvrs=[{
+#             "ip": ip,
+#             "port": port,
+#             "username": username,
+#             "password": password
+#         }]
+#     )
+
 #     print("Session established.")
 
-#     ret, frame = hik.capture_frame_buffer(nvr_ip="192.168.100.10", channel=33)
+#     ret, frame = hik.capture_frame_buffer(nvr_ip=ip, channel=33)
 
 #     if ret:
 #         print("Frame captured:", frame.shape)
@@ -901,6 +933,7 @@ class HikvisionSDK:
 #     hik.close()
 
 #     print("Session closed.")
+
 
 # ------------< CAPTURE FRAME BUFFER TESTS >-----------------
 # if __name__ == "__main__":
@@ -920,9 +953,18 @@ class HikvisionSDK:
 #           NVR PASSWORD: {password}\n
 #           """)
 
+#     hik = HikvisionSDK(
+#         nvrs=[{
+#             "ip": ip,
+#             "port": port,
+#             "username": username,
+#             "password": password
+#         }]
+#     )
+
 #     print("Session established.")
 
-#     ret, frame = hik.capture_frame_file(nvr_ip="192.168.100.10", channel=33)
+#     ret, frame = hik.capture_frame_file(nvr_ip=ip, channel=33)
 
 #     if ret:
 #         print("Frame captured:", frame.shape)
