@@ -819,6 +819,7 @@ class HikvisionSDK:
             pass
 
 
+# ------------< Scan Active Channels >-----------------
 # if __name__ == "__main__":
 
 #     from app.config.config import AppConfig
@@ -835,17 +836,30 @@ class HikvisionSDK:
 #           NVR USERNAME: {username}\n
 #           NVR PASSWORD: {password}\n
 #           """)
+
+#     hik.scan_channels("192.168.100.10", 1, 64)
+
+
+# ------------< LIVE VIEW / REAL PLAY TESTS >-----------------
+# if __name__ == "__main__":
+
+#     from app.config.config import AppConfig
+#     cfg = AppConfig()
     
-#     hik = HikvisionSDK(
-#         nvrs=[{
-#             "ip": ip,
-#             "port": port,
-#             "username": username,
-#             "password": password
-#         }]
-#     )
-#     hik.scan_channels(ip, 1, 64)
-#     for frame in hik.live_stream(ip, 33):
+#     ip = cfg.get("NVR","IP")
+#     port = cfg.get("NVR", "PORT")
+#     username = cfg.get("NVR", "USERNAME")
+#     password = cfg.get("NVR", "PASSWORD")
+
+#     print(f"""
+#           NVR IP: {ip}\n
+#           NVR PORT: {port}\n
+#           NVR USERNAME: {username}\n
+#           NVR PASSWORD: {password}\n
+#           """)
+
+#     hik.scan_channels("192.168.100.10", 1, 64)
+#     for frame in hik.live_stream("192.168.100.10", 33):
 #         cv2.imshow("live", frame)
 #         # waitKey() is required for imshow to actually paint/refresh the
 #         # window and process its message queue — without it the window
@@ -855,3 +869,68 @@ class HikvisionSDK:
 
 #     cv2.destroyAllWindows()
 #     hik.close()
+
+# ------------< CAPTURE FRAME BUFFER TESTS >-----------------
+# if __name__ == "__main__":
+
+#     from app.config.config import AppConfig
+#     cfg = AppConfig()
+    
+#     ip = cfg.get("NVR","IP")
+#     port = cfg.get("NVR", "PORT")
+#     username = cfg.get("NVR", "USERNAME")
+#     password = cfg.get("NVR", "PASSWORD")
+
+#     print(f"""
+#           NVR IP: {ip}\n
+#           NVR PORT: {port}\n
+#           NVR USERNAME: {username}\n
+#           NVR PASSWORD: {password}\n
+#           """)
+#     print("Session established.")
+
+#     ret, frame = hik.capture_frame_buffer(nvr_ip="192.168.100.10", channel=33)
+
+#     if ret:
+#         print("Frame captured:", frame.shape)
+#         cv2.imshow("Captured Frame", frame)
+#         cv2.waitKey(0)
+#     else:
+#         print("Capture failed")
+
+#     hik.close()
+
+#     print("Session closed.")
+
+# ------------< CAPTURE FRAME BUFFER TESTS >-----------------
+# if __name__ == "__main__":
+
+#     from app.config.config import AppConfig
+#     cfg = AppConfig()
+    
+#     ip = cfg.get("NVR","IP")
+#     port = cfg.get("NVR", "PORT")
+#     username = cfg.get("NVR", "USERNAME")
+#     password = cfg.get("NVR", "PASSWORD")
+
+#     print(f"""
+#           NVR IP: {ip}\n
+#           NVR PORT: {port}\n
+#           NVR USERNAME: {username}\n
+#           NVR PASSWORD: {password}\n
+#           """)
+
+#     print("Session established.")
+
+#     ret, frame = hik.capture_frame_file(nvr_ip="192.168.100.10", channel=33)
+
+#     if ret:
+#         print("Frame captured:", frame.shape)
+#         cv2.imshow("Captured Frame", frame)
+#         cv2.waitKey(0)
+#     else:
+#         print("Capture failed")
+
+#     hik.close()
+
+#     print("Session closed")
