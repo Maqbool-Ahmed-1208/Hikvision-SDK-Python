@@ -291,8 +291,8 @@ YOLO / OCR / Face Recognition / AI Models
 
 # Requirements
 
-* Python 3.9+
-* Windows
+* Python 3.10+
+* Windows/Linux
 * Hikvision HCNetSDK
 * OpenCV
 * NumPy
