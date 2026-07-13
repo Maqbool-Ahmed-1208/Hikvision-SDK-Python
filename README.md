@@ -309,12 +309,44 @@ hik.close()
 The SDK automatically manages independent sessions for multiple NVRs.
 
 ```python
+import cv2
+from app.config.config import AppConfig
+from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
+cfg = AppConfig()
+
+ip_1 = cfg.get("NVR_1","IP")
+port_1 = cfg.get("NVR_1", "PORT")
+username_1 = cfg.get("NVR_1", "USERNAME")
+password_1 = cfg.get("NVR_1", "PASSWORD")
+
+ip_2 = cfg.get("NVR_2","IP")
+port_2 = cfg.get("NVR_2", "PORT")
+username_2 = cfg.get("NVR_2", "USERNAME")
+password_2 = cfg.get("NVR_2", "PASSWORD")
+
+hik = HikvisionSDK(
+    nvrs=[{
+        "ip": ip_1,
+        "port": port_1,
+        "username": username_1,
+        "password": password_1
+    },
+    {
+        "ip": ip_2,
+        "port": port_2,
+        "username": username_2,
+        "password": password_2
+    }]
+)
+
+print("Session established.")
+
 hik.capture_frame_file(
     nvr_ip=ip_1,
     channel=5,
 )
 
-hik.capture_frame_file(
+hik.capture_frame_buffer(
     nvr_ip=ip_2,
     channel=5,
 )
