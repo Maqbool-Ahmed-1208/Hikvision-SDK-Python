@@ -1,57 +1,62 @@
 # Hikvision-SDK-Python
 
-A lightweight Python wrapper around the Hikvision HCNetSDK for interacting with Hikvision NVRs and IP cameras.
+A lightweight Python wrapper around the **Hikvision HCNetSDK** for communicating with Hikvision NVRs and IP cameras.
 
-The library provides a simple interface for:
+The project provides a simple Python interface for:
 
-- 📷 Capture JPEG frames directly from cameras
-- 🎥 Live video streaming
-- 🔍 Scan active NVR channels
-- 🔄 Multi-NVR session management
-- ⚡ High-performance frame acquisition using the native Hikvision SDK
+* 📷 Capture JPEG frames
+* 🎥 Live video streaming
+* 🔍 Scan active NVR channels
+* 🗺 Build Camera IP → Channel mapping
+* 🔄 Multi-NVR session management
+* ⚡ High-performance frame acquisition for AI pipelines
 
----
-
-# Features
-
-- Native Hikvision HCNetSDK integration
-- Single login reused across multiple capture requests
-- Supports multiple NVRs simultaneously
-- Thread-safe frame capture
-- Live preview using OpenCV
-- Capture frames directly into memory
-- Capture frames through temporary JPEG files
-- Automatic SDK initialization and cleanup
-- Channel scanning utilities
+Designed for production computer vision systems where thousands of frame capture requests must be handled efficiently.
 
 ---
 
-# Project Structure
+## Features
 
-```
-Hikvision-SDK-Python
-│
-├── app
-│   ├── config
+* Single login per NVR with session reuse
+* Multi-NVR support
+* Thread-safe SDK wrapper
+* Capture frames directly into memory
+* Capture frames through JPEG files
+* Live preview / RealPlay streaming
+* Automatic camera channel discovery
+* Camera IP → Channel lookup
+* Simple Python API
+* Production-ready architecture
+
+---
+
+# Repository Structure
+
+```text
+.
+├── app/
+│   ├── config/
 │   │   ├── config.cfg
 │   │   └── config.py
 │   │
-│   ├── hikvision_sdk_package
-│   │   ├── bin
+│   ├── hikvision_sdk_package/
+│   │   ├── bin/
+│   │   │   ├── ClientDemoDll/
+│   │   │   ├── HCNetSDKCom/
 │   │   │   ├── HCNetSDK.dll
-│   │   │   ├── HCNetSDKCom
-│   │   │   ├── ClientDemoDll
+│   │   │   ├── PlayCtrl.dll
 │   │   │   └── ...
 │   │   │
 │   │   ├── hikvision_sdk.py
 │   │   └── nvr_camera_channel_mapping.py
 │   │
-│   └── utils
+│   └── utils/
 │       └── helper_functions.py
 │
-├── requirements.txt
 ├── LICENSE
-└── README.md
+├── README.md
+├── requirements.txt
+└── .gitignore
 ```
 
 ---
@@ -74,27 +79,11 @@ pip install -r requirements.txt
 
 ---
 
-# Requirements
-
-- Python 3.10+
-- Windows/Linux
-- Hikvision HCNetSDK
-- OpenCV
-- NumPy
-
-The required SDK binaries are already included inside
-
-```
-app/hikvision_sdk_package/bin/
-```
-
----
-
 # Configuration
 
 Edit
 
-```
+```text
 app/config/config.cfg
 ```
 
@@ -110,175 +99,203 @@ PASSWORD = your_password
 
 ---
 
-# Initialize
+# Project Modules
 
-```python
-from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
-
-hik = HikvisionSDK()
-```
+| Module                          | Description                 |
+| ------------------------------- | --------------------------- |
+| `hikvision_sdk.py`              | Main SDK wrapper            |
+| `nvr_camera_channel_mapping.py` | Camera IP ↔ Channel mapping |
+| `helper_functions.py`           | Utility functions           |
+| `config.py`                     | Configuration loader        |
 
 ---
 
-# Scan Active Channels
+# Usage
+
+## 1. Build Camera Channel Mapping
+
+Builds a lookup table mapping camera IP addresses to Hikvision channel numbers.
 
 ```python
-hik.scan_channels(
-    nvr_ip="192.168.100.10",
-    start_channel=1,
-    end_channel=64
+from app.config.config import AppConfig
+from app.hikvision_sdk_package.nvr_camera_channel_mapping import (
+    build_camera_channel_mapping,
+    get_camera_channel,
 )
-```
 
-Example output
+cfg = AppConfig()
 
-```
-Channel 1   Active
-Channel 2   Active
-Channel 3   Offline
-...
+ip = cfg.get("NVR", "IP")
+username = cfg.get("NVR", "USERNAME")
+password = cfg.get("NVR", "PASSWORD")
+
+build_camera_channel_mapping(
+    nvr_ip=ip,
+    username=username,
+    password=password,
+)
+
+channel = get_camera_channel(
+    nvr_ip=ip,
+    camera_ip="192.168.100.116",
+)
+
+print(channel)
 ```
 
 ---
 
-# Live Stream
+## 2. Scan Active Channels
+
+Lists available channels on the NVR.
+
+```python
+from app.config.config import AppConfig
+
+cfg = AppConfig()
+
+ip = cfg.get("NVR", "IP")
+
+hik.scan_channels(ip, 1, 64)
+```
+
+---
+
+## 3. Live View (RealPlay)
+
+Display live video frames from a camera channel.
 
 ```python
 import cv2
 
-for frame in hik.live_stream(
-    nvr_ip="192.168.100.10",
-    channel=33
-):
+from app.config.config import AppConfig
+
+cfg = AppConfig()
+
+ip = cfg.get("NVR", "IP")
+
+hik.scan_channels(ip, 1, 64)
+
+for frame in hik.live_stream(ip, 33):
+
     cv2.imshow("Live", frame)
 
     if cv2.waitKey(1) & 0xFF == 27:
         break
 
 cv2.destroyAllWindows()
+
 hik.close()
 ```
 
-Press **ESC** to stop streaming.
-
 ---
 
-# Capture Frame (Memory Buffer)
+## 4. Capture Frame (Memory Buffer)
 
-Returns a NumPy image without writing to disk.
+Captures a frame directly into a NumPy array without saving to disk.
 
 ```python
+import cv2
+
 ret, frame = hik.capture_frame_buffer(
     nvr_ip="192.168.100.10",
-    channel=33
+    channel=33,
 )
 
 if ret:
+
     print(frame.shape)
-```
 
-Display the image
+    cv2.imshow("Captured", frame)
 
-```python
-cv2.imshow("Frame", frame)
-cv2.waitKey(0)
+    cv2.waitKey(0)
+
+hik.close()
 ```
 
 ---
 
-# Capture Frame (JPEG File)
+## 5. Capture Frame (JPEG File)
 
-Captures a JPEG using the SDK and loads it into OpenCV.
+Captures a JPEG image using the SDK and loads it into memory.
 
 ```python
+import cv2
+
 ret, frame = hik.capture_frame_file(
     nvr_ip="192.168.100.10",
-    channel=33
+    channel=33,
 )
 
 if ret:
-    cv2.imshow("Frame", frame)
+
+    print(frame.shape)
+
+    cv2.imshow("Captured", frame)
+
     cv2.waitKey(0)
+
+hik.close()
 ```
 
 ---
 
 # Multi-NVR Support
 
-The SDK maintains independent sessions for each NVR.
+The SDK automatically manages independent sessions for multiple NVRs.
 
 ```python
-hik.capture_frame_buffer(
+hik.capture_frame_file(
     nvr_ip="192.168.100.10",
-    channel=12
+    channel=5,
 )
 
-hik.capture_frame_buffer(
-    nvr_ip="192.168.100.20",
-    channel=8
+hik.capture_frame_file(
+    nvr_ip="192.168.200.20",
+    channel=12,
 )
 ```
 
-Sessions are automatically reused, avoiding repeated login operations.
+Each NVR maintains:
+
+* Independent login session
+* Session reuse
+* Thread-safe capture
+* Automatic reconnect (if implemented)
 
 ---
 
-# Supported Functions
+# Typical AI Pipeline
 
-| Function | Description |
-|----------|-------------|
-| `scan_channels()` | Detect active channels |
-| `capture_frame_buffer()` | Capture image directly into memory |
-| `capture_frame_file()` | Capture image using temporary JPEG |
-| `live_stream()` | Real-time video preview |
-| `close()` | Logout and release SDK resources |
-
----
-
-# Example
-
-```python
-from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
-import cv2
-
-hik = HikvisionSDK()
-
-ret, frame = hik.capture_frame_buffer(
-    nvr_ip="192.168.100.10",
-    channel=33
-)
-
-if ret:
-    cv2.imshow("Frame", frame)
-    cv2.waitKey(0)
-
-hik.close()
+```text
+NVR
+   │
+   ▼
+Login Once
+   │
+   ▼
+Session Cache
+   │
+   ├───────────────┐
+   │               │
+Capture        Live Stream
+   │               │
+   ▼               ▼
+OpenCV Frame   NumPy Frame
+        │
+        ▼
+YOLO / OCR / Face Recognition / AI Models
 ```
 
 ---
 
-# Performance Notes
+# Requirements
 
-- One login per NVR
-- Session reuse across requests
-- Thread-safe frame capture
-- Supports concurrent access to multiple NVRs
-- Designed for high-throughput AI and computer vision pipelines
-
----
-
-# Dependencies
-
-- OpenCV
-- NumPy
-- ctypes
-- Hikvision HCNetSDK
-
----
-
-# License
-
-This project is licensed under the MIT License.
+* Python 3.9+
+* Windows
+* Hikvision HCNetSDK
+* OpenCV
+* NumPy
 
 ---
 
@@ -292,15 +309,20 @@ https://www.hikvision.com/us-en/support/download/sdk/
 
 ---
 
-## Author
+# License
+
+This project is released under the MIT License.
+
+---
+
+# Author
 
 **Maqbool Ahmed**
 
-- AI Engineer
-- Computer Vision
-- Generative AI
-- Industrial AI Systems
+* AI Engineer
+* Computer Vision
+* Generative AI
+* LLM Applications
+* Production AI Systems
 
-GitHub:
-
-https://github.com/Maqbool-Ahmed-1208
+GitHub: [https://github.com/Maqbool-Ahmed-1208](https://github.com/Maqbool-Ahmed-1208)
