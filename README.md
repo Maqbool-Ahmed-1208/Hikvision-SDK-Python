@@ -315,7 +315,7 @@ from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 cfg = AppConfig()
 
 ip_1 = cfg.get("NVR_1","IP")
-port_1 = cfg.get("NVR_1", "PORT")
+port_1 = cfg.get("NVR_1", "PORT", cast=int)
 username_1 = cfg.get("NVR_1", "USERNAME")
 password_1 = cfg.get("NVR_1", "PASSWORD")
 

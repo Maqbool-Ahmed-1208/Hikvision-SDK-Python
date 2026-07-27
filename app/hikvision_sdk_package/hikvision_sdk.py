@@ -81,7 +81,7 @@ class HikvisionSDK:
     def __init__(
         self,
         nvrs: list,
-        sdk_path=r"app\config\hikvision_sdk_package\bin\HCNetSDK.dll"
+        sdk_path=r"app\hikvision_sdk_package\bin\HCNetSDK.dll"
     ):
 
         self.sdk_path = sdk_path
