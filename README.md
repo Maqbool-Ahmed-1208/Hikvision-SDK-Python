@@ -156,7 +156,7 @@ from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 cfg = AppConfig()
 
 ip = cfg.get("NVR","IP")
-port = cfg.get("NVR", "PORT")
+port = cfg.get("NVR", "PORT", cast=int)
 username = cfg.get("NVR", "USERNAME")
 password = cfg.get("NVR", "PASSWORD")
 
@@ -187,7 +187,7 @@ from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 cfg = AppConfig()
 
 ip = cfg.get("NVR","IP")
-port = cfg.get("NVR", "PORT")
+port = cfg.get("NVR", "PORT", cast=int)
 username = cfg.get("NVR", "USERNAME")
 password = cfg.get("NVR", "PASSWORD")
 
@@ -227,7 +227,7 @@ from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 cfg = AppConfig()
 
 ip = cfg.get("NVR","IP")
-port = cfg.get("NVR", "PORT")
+port = cfg.get("NVR", "PORT", cast=int)
 username = cfg.get("NVR", "USERNAME")
 password = cfg.get("NVR", "PASSWORD")
 
@@ -271,7 +271,7 @@ from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 cfg = AppConfig()
 
 ip = cfg.get("NVR","IP")
-port = cfg.get("NVR", "PORT")
+port = cfg.get("NVR", "PORT", cast=int)
 username = cfg.get("NVR", "USERNAME")
 password = cfg.get("NVR", "PASSWORD")
 
@@ -320,7 +320,7 @@ username_1 = cfg.get("NVR_1", "USERNAME")
 password_1 = cfg.get("NVR_1", "PASSWORD")
 
 ip_2 = cfg.get("NVR_2","IP")
-port_2 = cfg.get("NVR_2", "PORT")
+port_2 = cfg.get("NVR_2", "PORT", cast=int)
 username_2 = cfg.get("NVR_2", "USERNAME")
 password_2 = cfg.get("NVR_2", "PASSWORD")
 
