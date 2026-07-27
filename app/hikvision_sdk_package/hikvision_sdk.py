@@ -826,7 +826,7 @@ class HikvisionSDK:
 #     cfg = AppConfig()
     
 #     ip = cfg.get("NVR","IP")
-#     port = cfg.get("NVR", "PORT")
+#     port = cfg.get("NVR", "PORT", cast=int)
 #     username = cfg.get("NVR", "USERNAME")
 #     password = cfg.get("NVR", "PASSWORD")
 
@@ -858,7 +858,7 @@ class HikvisionSDK:
 #     cfg = AppConfig()
     
 #     ip = cfg.get("NVR","IP")
-#     port = cfg.get("NVR", "PORT")
+#     port = cfg.get("NVR", "PORT", cast=int)
 #     username = cfg.get("NVR", "USERNAME")
 #     password = cfg.get("NVR", "PASSWORD")
 
@@ -899,7 +899,7 @@ class HikvisionSDK:
 #     cfg = AppConfig()
     
 #     ip = cfg.get("NVR","IP")
-#     port = cfg.get("NVR", "PORT")
+#     port = cfg.get("NVR", "PORT", cast=int)
 #     username = cfg.get("NVR", "USERNAME")
 #     password = cfg.get("NVR", "PASSWORD")
 
@@ -942,7 +942,7 @@ class HikvisionSDK:
 #     cfg = AppConfig()
     
 #     ip = cfg.get("NVR","IP")
-#     port = cfg.get("NVR", "PORT")
+#     port = cfg.get("NVR", "PORT", cast=int)
 #     username = cfg.get("NVR", "USERNAME")
 #     password = cfg.get("NVR", "PASSWORD")
 
