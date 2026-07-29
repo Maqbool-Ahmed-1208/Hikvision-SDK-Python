@@ -46,6 +46,9 @@ class HikvisionDownloaderGUI:
         
         self.root.configure(bg=self.colors['bg'])
         
+        # Set cursor for root window
+        self.root.config(cursor="arrow")
+        
         # Style configuration
         self.style = ttk.Style()
         self.style.theme_use('clam')
@@ -78,7 +81,8 @@ class HikvisionDownloaderGUI:
                            borderwidth=2,
                            focusthickness=3,
                            focuscolor=self.colors['accent_primary'],
-                           padding=(15, 5))
+                           padding=(15, 5),
+                           cursor="hand2")
         
         self.style.map('TButton',
                       background=[('active', self.colors['button_hover'])],
@@ -91,7 +95,10 @@ class HikvisionDownloaderGUI:
                            fieldbackground=self.colors['entry_bg'],
                            borderwidth=2,
                            font=('Segoe UI', 10),
-                           padding=(5, 3))
+                           padding=(5, 3),
+                           cursor="xterm",
+                           insertcolor=self.colors['accent_primary'],  # Blinking cursor color
+                           insertwidth=2)  # Cursor width
         
         self.style.map('TEntry',
                       bordercolor=[('focus', self.colors['accent_primary'])])
@@ -110,7 +117,10 @@ class HikvisionDownloaderGUI:
                            borderwidth=2,
                            font=('Segoe UI', 10),
                            padding=(3, 2),
-                           width=8)
+                           width=8,
+                           cursor="xterm",
+                           insertcolor=self.colors['accent_primary'],  # Blinking cursor color
+                           insertwidth=2)  # Cursor width
 
         cfg = AppConfig()
 
@@ -122,8 +132,8 @@ class HikvisionDownloaderGUI:
 
         self.hik = None
         self.logged_in = False
-        self.downloading = False  # Flag to track download status
-        self.stop_download = False  # Flag to stop download
+        self.downloading = False
+        self.stop_download = False
 
         self.build_ui()
 
@@ -251,12 +261,16 @@ class HikvisionDownloaderGUI:
         return True, ""
 
     def login_nvr(self):
-
+        
+        # Change cursor to watch during login
+        self.root.config(cursor="watch")
+        
         if self.logged_in:
             messagebox.showinfo(
                 "Already Logged In",
                 "NVR session is already active."
             )
+            self.root.config(cursor="arrow")
             return
 
         try:
@@ -297,6 +311,10 @@ class HikvisionDownloaderGUI:
                 "Login Failed",
                 str(e)
             )
+        
+        finally:
+            # Restore cursor
+            self.root.config(cursor="arrow")
 
     ##############################################################
 
@@ -314,14 +332,16 @@ class HikvisionDownloaderGUI:
                                text="NVR Recording Downloader",
                                font=('Segoe UI', 18, 'bold'),
                                fg=self.colors['accent_primary'],
-                               bg=self.colors['bg'])
+                               bg=self.colors['bg'],
+                               cursor="xterm")
         title_label.pack()
         
         subtitle_label = tk.Label(title_frame, 
                                  text="Hikvision Video Playback & Recording Tool",
                                  font=('Segoe UI', 10),
                                  fg=self.colors['fg_dim'],
-                                 bg=self.colors['bg'])
+                                 bg=self.colors['bg'],
+                                 cursor="xterm")
         subtitle_label.pack()
 
         # Recording Information Frame
@@ -336,51 +356,62 @@ class HikvisionDownloaderGUI:
                            text="Camera IP:",
                            font=('Segoe UI', 10),
                            fg=self.colors['fg'],
-                           bg=self.colors['bg'])
+                           bg=self.colors['bg'],
+                           cursor="xterm")
         ip_label.pack(side="left", padx=(0, 15))
         
         self.camera_ip_1 = ttk.Entry(ip_frame, style='Small.TEntry', width=5)
         self.camera_ip_1.pack(side="left", padx=2)
         self.camera_ip_1.insert(0, "192")
+        self.camera_ip_1.focus_set()  # Set focus to first entry
+        # Select all text on focus
+        self.camera_ip_1.bind('<FocusIn>', lambda e: self.camera_ip_1.select_range(0, tk.END))
         
         dot_label1 = tk.Label(ip_frame, 
                              text=".", 
                              font=('Segoe UI', 14, 'bold'),
                              fg=self.colors['accent_primary'],
-                             bg=self.colors['bg'])
+                             bg=self.colors['bg'],
+                             cursor="xterm")
         dot_label1.pack(side="left")
         
         self.camera_ip_2 = ttk.Entry(ip_frame, style='Small.TEntry', width=5)
         self.camera_ip_2.pack(side="left", padx=2)
         self.camera_ip_2.insert(0, "168")
+        self.camera_ip_2.bind('<FocusIn>', lambda e: self.camera_ip_2.select_range(0, tk.END))
         
         dot_label2 = tk.Label(ip_frame, 
                              text=".",
                              font=('Segoe UI', 14, 'bold'),
                              fg=self.colors['accent_primary'],
-                             bg=self.colors['bg'])
+                             bg=self.colors['bg'],
+                             cursor="xterm")
         dot_label2.pack(side="left")
         
         self.camera_ip_3 = ttk.Entry(ip_frame, style='Small.TEntry', width=5)
         self.camera_ip_3.pack(side="left", padx=2)
         self.camera_ip_3.insert(0, "1")
+        self.camera_ip_3.bind('<FocusIn>', lambda e: self.camera_ip_3.select_range(0, tk.END))
         
         dot_label3 = tk.Label(ip_frame, 
                              text=".",
                              font=('Segoe UI', 14, 'bold'),
                              fg=self.colors['accent_primary'],
-                             bg=self.colors['bg'])
+                             bg=self.colors['bg'],
+                             cursor="xterm")
         dot_label3.pack(side="left")
         
         self.camera_ip_4 = ttk.Entry(ip_frame, style='Small.TEntry', width=5)
         self.camera_ip_4.pack(side="left", padx=2)
         self.camera_ip_4.insert(0, "101")
+        self.camera_ip_4.bind('<FocusIn>', lambda e: self.camera_ip_4.select_range(0, tk.END))
         
         hint_label = tk.Label(ip_frame, 
                              text="(0-255 each)",
                              fg=self.colors['fg_dim'],
                              bg=self.colors['bg'],
-                             font=('Segoe UI', 8))
+                             font=('Segoe UI', 8),
+                             cursor="xterm")
         hint_label.pack(side="left", padx=(10, 0))
         
         # Date with separate boxes
@@ -391,40 +422,47 @@ class HikvisionDownloaderGUI:
                              text="Date:",
                              font=('Segoe UI', 10),
                              fg=self.colors['fg'],
-                             bg=self.colors['bg'])
+                             bg=self.colors['bg'],
+                             cursor="xterm")
         date_label.pack(side="left", padx=(0, 15))
         
         self.date_day = ttk.Entry(date_frame, style='Small.TEntry', width=4)
         self.date_day.pack(side="left", padx=2)
         self.date_day.insert(0, "27")
+        self.date_day.bind('<FocusIn>', lambda e: self.date_day.select_range(0, tk.END))
         
         dash_label1 = tk.Label(date_frame, 
                               text="−",
                               font=('Segoe UI', 14, 'bold'),
                               fg=self.colors['accent_primary'],
-                              bg=self.colors['bg'])
+                              bg=self.colors['bg'],
+                              cursor="xterm")
         dash_label1.pack(side="left")
         
         self.date_month = ttk.Entry(date_frame, style='Small.TEntry', width=4)
         self.date_month.pack(side="left", padx=2)
         self.date_month.insert(0, "07")
+        self.date_month.bind('<FocusIn>', lambda e: self.date_month.select_range(0, tk.END))
         
         dash_label2 = tk.Label(date_frame, 
                               text="−",
                               font=('Segoe UI', 14, 'bold'),
                               fg=self.colors['accent_primary'],
-                              bg=self.colors['bg'])
+                              bg=self.colors['bg'],
+                              cursor="xterm")
         dash_label2.pack(side="left")
         
         self.date_year = ttk.Entry(date_frame, style='Small.TEntry', width=6)
         self.date_year.pack(side="left", padx=2)
         self.date_year.insert(0, "2026")
+        self.date_year.bind('<FocusIn>', lambda e: self.date_year.select_range(0, tk.END))
         
         date_hint = tk.Label(date_frame, 
                             text="(DD-MM-YYYY)",
                             fg=self.colors['fg_dim'],
                             bg=self.colors['bg'],
-                            font=('Segoe UI', 8))
+                            font=('Segoe UI', 8),
+                            cursor="xterm")
         date_hint.pack(side="left", padx=(10, 0))
         
         # Time with separate boxes
@@ -439,29 +477,34 @@ class HikvisionDownloaderGUI:
                               text="Start:",
                               font=('Segoe UI', 10),
                               fg=self.colors['fg'],
-                              bg=self.colors['bg'])
+                              bg=self.colors['bg'],
+                              cursor="xterm")
         start_label.pack(side="left", padx=(0, 10))
         
         self.start_hour = ttk.Entry(start_frame, style='Small.TEntry', width=4)
         self.start_hour.pack(side="left", padx=2)
         self.start_hour.insert(0, "09")
+        self.start_hour.bind('<FocusIn>', lambda e: self.start_hour.select_range(0, tk.END))
         
         colon_label1 = tk.Label(start_frame, 
                                text=":",
                                font=('Segoe UI', 14, 'bold'),
                                fg=self.colors['accent_primary'],
-                               bg=self.colors['bg'])
+                               bg=self.colors['bg'],
+                               cursor="xterm")
         colon_label1.pack(side="left")
         
         self.start_minute = ttk.Entry(start_frame, style='Small.TEntry', width=4)
         self.start_minute.pack(side="left", padx=2)
         self.start_minute.insert(0, "00")
+        self.start_minute.bind('<FocusIn>', lambda e: self.start_minute.select_range(0, tk.END))
         
         time_hint = tk.Label(start_frame, 
                             text="(HH:MM)",
                             fg=self.colors['fg_dim'],
                             bg=self.colors['bg'],
-                            font=('Segoe UI', 8))
+                            font=('Segoe UI', 8),
+                            cursor="xterm")
         time_hint.pack(side="left", padx=(5, 0))
         
         # End Time
@@ -472,29 +515,34 @@ class HikvisionDownloaderGUI:
                             text="End:",
                             font=('Segoe UI', 10),
                             fg=self.colors['fg'],
-                            bg=self.colors['bg'])
+                            bg=self.colors['bg'],
+                            cursor="xterm")
         end_label.pack(side="left", padx=(0, 10))
         
         self.end_hour = ttk.Entry(end_frame, style='Small.TEntry', width=4)
         self.end_hour.pack(side="left", padx=2)
         self.end_hour.insert(0, "09")
+        self.end_hour.bind('<FocusIn>', lambda e: self.end_hour.select_range(0, tk.END))
         
         colon_label2 = tk.Label(end_frame, 
                                text=":",
                                font=('Segoe UI', 14, 'bold'),
                                fg=self.colors['accent_primary'],
-                               bg=self.colors['bg'])
+                               bg=self.colors['bg'],
+                               cursor="xterm")
         colon_label2.pack(side="left")
         
         self.end_minute = ttk.Entry(end_frame, style='Small.TEntry', width=4)
         self.end_minute.pack(side="left", padx=2)
         self.end_minute.insert(0, "05")
+        self.end_minute.bind('<FocusIn>', lambda e: self.end_minute.select_range(0, tk.END))
         
         time_hint2 = tk.Label(end_frame, 
                              text="(HH:MM)",
                              fg=self.colors['fg_dim'],
                              bg=self.colors['bg'],
-                             font=('Segoe UI', 8))
+                             font=('Segoe UI', 8),
+                             cursor="xterm")
         time_hint2.pack(side="left", padx=(5, 0))
 
         # Output Frame
@@ -509,6 +557,7 @@ class HikvisionDownloaderGUI:
             os.path.join(self.default_root, "nvr_downloads"),
         )
         self.output.grid(row=0, column=0, padx=(0, 10), pady=5, sticky="ew")
+        self.output.bind('<FocusIn>', lambda e: self.output.select_range(0, tk.END))
         
         browse_btn = ttk.Button(
             out,
@@ -565,7 +614,8 @@ class HikvisionDownloaderGUI:
                                       text="0%",
                                       font=('Segoe UI', 10, 'bold'),
                                       fg=self.colors['accent_primary'],
-                                      bg=self.colors['bg'])
+                                      bg=self.colors['bg'],
+                                      cursor="xterm")
         self.progress_label.pack(anchor="e", pady=(0, 5))
         
         self.status = tk.StringVar(value="🟢 Ready")
@@ -573,18 +623,52 @@ class HikvisionDownloaderGUI:
                                     textvariable=self.status,
                                     font=('Segoe UI', 9),
                                     fg=self.colors['fg_dim'],
-                                    bg=self.colors['bg'])
+                                    bg=self.colors['bg'],
+                                    cursor="xterm")
         self.status_label.pack(anchor="w")
+        
+        # Bind Tab key to navigate through entry fields
+        self.bind_tab_navigation()
+
+    ##############################################################
+    
+    def bind_tab_navigation(self):
+        """Bind Tab key for navigation between entry fields"""
+        entries = [
+            self.camera_ip_1, self.camera_ip_2, self.camera_ip_3, self.camera_ip_4,
+            self.date_day, self.date_month, self.date_year,
+            self.start_hour, self.start_minute,
+            self.end_hour, self.end_minute,
+            self.output
+        ]
+        
+        for i, entry in enumerate(entries):
+            if i < len(entries) - 1:
+                entry.bind('<Tab>', lambda e, next_entry=entries[i+1]: 
+                          (next_entry.focus_set(), next_entry.select_range(0, tk.END), 'break'))
+                entry.bind('<Return>', lambda e, next_entry=entries[i+1]: 
+                          (next_entry.focus_set(), next_entry.select_range(0, tk.END), 'break'))
+        
+        # Last entry focuses on download button
+        if entries:
+            entries[-1].bind('<Tab>', lambda e: (self.download_btn.focus_set(), 'break'))
+            entries[-1].bind('<Return>', lambda e: (self.download_btn.focus_set(), 'break'))
 
     ##############################################################
 
     def browse(self):
-
+        
+        # Change cursor to watch during directory browsing
+        self.root.config(cursor="watch")
+        
         folder = filedialog.askdirectory()
 
         if folder:
             self.output.delete(0, tk.END)
             self.output.insert(0, folder)
+        
+        # Restore cursor
+        self.root.config(cursor="arrow")
 
     ##############################################################
 
@@ -633,6 +717,9 @@ class HikvisionDownloaderGUI:
         self.progress['value'] = 0
         self.progress_label.config(text="0%")
         
+        # Change cursor to watch during download
+        self.root.config(cursor="watch")
+        
         threading.Thread(
             target=self.download_recording,
             daemon=True,
@@ -661,6 +748,8 @@ class HikvisionDownloaderGUI:
         # Update color based on progress
         if percent == 100:
             self.status_label.configure(foreground=self.colors['success'])
+            # Restore cursor when download completes
+            self.root.config(cursor="arrow")
         elif percent > 0:
             self.status_label.configure(foreground=self.colors['fg'])
         else:
@@ -678,6 +767,7 @@ class HikvisionDownloaderGUI:
                 ))
                 self.downloading = False
                 self.download_btn.config(state=tk.NORMAL)
+                self.root.config(cursor="arrow")
                 return
 
             camera_ip = self.get_camera_ip()
@@ -701,6 +791,7 @@ class HikvisionDownloaderGUI:
                 ))
                 self.downloading = False
                 self.download_btn.config(state=tk.NORMAL)
+                self.root.config(cursor="arrow")
                 return
 
             save_path = os.path.join(
@@ -723,6 +814,7 @@ class HikvisionDownloaderGUI:
                 self.update_progress(0, "❌ Failed to start download.")
                 self.downloading = False
                 self.download_btn.config(state=tk.NORMAL)
+                self.root.config(cursor="arrow")
                 return
 
             last_percent = 0
@@ -751,19 +843,22 @@ class HikvisionDownloaderGUI:
                     self.update_progress(100, f"✅ Completed\n{path}")
                     break
 
-                time.sleep(0.5)  # Check every 500ms
+                time.sleep(0.5)
 
             # Check if stopped by user
             if self.stop_download:
                 self.hik.stop_download(self.nvr_ip, channel)
                 self.update_progress(0, "⏹️ Download stopped by user.")
+                self.root.config(cursor="arrow")
 
         except Exception as e:
             self.update_progress(0, f"❌ {str(e)}")
+            self.root.config(cursor="arrow")
         
         finally:
             self.downloading = False
             self.download_btn.config(state=tk.NORMAL if self.logged_in else tk.DISABLED)
+            self.root.config(cursor="arrow")
 
     ##############################################################
     
@@ -775,6 +870,8 @@ class HikvisionDownloaderGUI:
                                       "A download is currently in progress. Stop download and quit?"):
                 return
             self.stop_download = True
+            # Change cursor to watch during logout
+            self.root.config(cursor="watch")
         
         # Logout from NVR
         if self.hik is not None:
@@ -786,6 +883,9 @@ class HikvisionDownloaderGUI:
                 messagebox.showinfo("Success", "Successfully logged out from NVR.")
             except Exception as e:
                 messagebox.showerror("Logout Error", f"Error during logout: {e}")
+        
+        # Restore cursor
+        self.root.config(cursor="arrow")
         
         # Destroy the window
         self.root.destroy()
