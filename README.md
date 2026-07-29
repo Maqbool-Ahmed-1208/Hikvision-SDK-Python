@@ -90,6 +90,9 @@ app/config/config.cfg
 Example
 
 ```ini
+[PATHS]
+ROOT = Hikvision-SDK-Python # Modify it, if needed.
+
 [NVR]
 IP = 192.168.100.10
 PORT = 8000
@@ -216,7 +219,91 @@ hik.close()
 
 ---
 
-## 4. Capture Frame (Memory Buffer)
+## 4. Play Back Video Downloader
+
+Download recorded video from a camera channel.
+
+```python
+import cv2
+from app.config.config import AppConfig
+cfg = AppConfig()
+
+ip = cfg.get("NVR", "IP")
+port = cfg.get("NVR", "PORT", cast=int)
+username = cfg.get("NVR", "USERNAME")
+password = cfg.get("NVR", "PASSWORD")
+root_path = cfg.get("PATHS", "ROOT_PATHS")
+
+print(f"""
+        NVR IP: {ip}\n
+        NVR PORT: {port}\n
+        NVR USERNAME: {username}\n
+        NVR PASSWORD: {password}\n
+        """)
+
+hik = HikvisionSDK(
+    nvrs=[{
+        "ip": ip,
+        "port": port,
+        "username": username,
+        "password": password
+    }]
+)
+
+print("Session established.")
+
+# --- download a recording by time range (no client-side decode) ---
+channel = 33
+
+start_time = "09:00"   # "hh:mm" -> paired with `date` below
+end_time = "09:05"
+date = "27-07-2026"    # "dd-mm-yyyy" -> pull recordings from this day
+save_path = os.path.join(
+    root_path,
+    "nvr_downloads",
+    f"test_channel{channel}_{date.replace('-', '')}.mp4"
+)
+
+handle = hik.get_recording(
+    nvr_ip=ip,
+    channel=channel,
+    start_time=start_time,
+    end_time=end_time,
+    date=date,
+    save_path=save_path
+)
+
+if handle < 0:
+    print("Failed to start recording download.")
+else:
+    print(f"Download started, handle={handle}. Waiting for completion...")
+
+    # poll manually instead of using wait_for_recording(), just to show
+    # the progress values as they come in
+    while True:
+        percent, path = hik.get_download_progress(ip, channel)
+
+        if percent < 0:
+            print(f"Download error/stopped, pos={percent}")
+            break
+
+        print(f"Download progress: {percent}%")
+
+        if percent >= 100:
+            hik.stop_download(ip, channel)
+            print(f"Download complete -> {path}")
+            break
+
+        time.sleep(1)
+
+hik.close()
+print("Session closed.")
+
+```
+
+---
+
+## 5. Capture Frame (Memory Buffer)
 
 Captures a frame directly into a NumPy array without saving to disk.
 
@@ -260,7 +347,7 @@ hik.close()
 
 ---
 
-## 5. Capture Frame (JPEG File)
+## 6. Capture Frame (JPEG File)
 
 Captures a JPEG image using the SDK and loads it into memory.
 

@@ -3,6 +3,7 @@ import cv2
 import time
 import tempfile
 import threading
+import datetime
 import numpy as np
 from ctypes import *
 
@@ -58,6 +59,31 @@ class NET_DVR_PREVIEWINFO(Structure):
     ]
 
 
+# ---------------------------------------------------------------------------
+# Playback-by-time structures (NET_DVR_PlayBackByTime)
+# ---------------------------------------------------------------------------
+
+class NET_DVR_TIME(Structure):
+    _fields_ = [
+        ("dwYear", c_uint),
+        ("dwMonth", c_uint),
+        ("dwDay", c_uint),
+        ("dwHour", c_uint),
+        ("dwMinute", c_uint),
+        ("dwSecond", c_uint),
+    ]
+
+
+class NET_DVR_PLAYCOND(Structure):
+    _fields_ = [
+        ("dwChannel", c_uint),
+        ("struStartTime", NET_DVR_TIME),
+        ("struStopTime", NET_DVR_TIME),
+        ("byDrawFrame", c_byte),   # 0-non key frame, 1-key frame only
+        ("byRes", c_byte * 63),
+    ]
+
+
 # void CALLBACK RealDataCallBack(LONG lRealHandle, DWORD dwDataType, BYTE *pBuffer, DWORD dwBufSize, void* dwUser)
 REALDATACALLBACK = WINFUNCTYPE(
     None, c_long, c_uint, POINTER(c_ubyte), c_uint, c_void_p
@@ -74,6 +100,9 @@ DISPLAYCBFUN = WINFUNCTYPE(
 )
 
 STREAME_REALTIME = 0  # PlayM4_SetStreamOpenMode mode: live/realtime stream
+
+# NET_DVR_PlayBackControl_V40 command code we use
+NET_DVR_PLAYSTART = 1
 
 
 class HikvisionSDK:
@@ -101,6 +130,9 @@ class HikvisionSDK:
         # keep strong refs to callback closures so they aren't GC'd
         self._live_callbacks = {}
         self._display_callbacks = {}
+        # NOTE: no callback closures to keep alive for recording downloads —
+        # NET_DVR_GetFileByTime_V40 has the NVR write straight to a file,
+        # there's no per-frame callback in that path.
 
         for nvr in nvrs:
 
@@ -124,7 +156,10 @@ class HikvisionSDK:
                 )(),
                 # live view state: channel -> {"handle", "port", "cap",
                 #   "frame_lock", "latest_frame"}
-                "live": {}
+                "live": {},
+                # playback state: channel -> {"handle", "port",
+                #   "frame_lock", "latest_frame", ...}
+                "playback": {}
             }
 
             print(
@@ -182,6 +217,58 @@ class HikvisionSDK:
         sdk.NET_DVR_StopRealPlay.argtypes = [c_long]
         sdk.NET_DVR_StopRealPlay.restype = c_bool
 
+        # --- playback-by-time bindings ---
+        # LONG NET_DVR_PlayBackByTime(LONG lUserID, LONG lChannel,
+        #     NET_DVR_TIME *lpStartTime, NET_DVR_TIME *lpStopTime, HWND hWnd)
+        # NOTE: matches the C# DllImport signature exactly — this one takes
+        # a window handle too (pass None/0 for headless decode-only use,
+        # same as NET_DVR_PREVIEWINFO.hPlayWnd elsewhere in this file).
+        sdk.NET_DVR_PlayBackByTime.argtypes = [
+            c_long,
+            c_long,
+            POINTER(NET_DVR_TIME),
+            POINTER(NET_DVR_TIME),
+            c_void_p
+        ]
+        sdk.NET_DVR_PlayBackByTime.restype = c_long
+
+        # --- download-recording-by-time bindings (no client-side decode) ---
+        # LONG NET_DVR_GetFileByTime_V40(LONG lUserID, char *sFileName,
+        #     NET_DVR_PLAYCOND *lpPlayCond)
+        # This has the NVR write the recording straight to an mp4 file on
+        # disk — there is no PlayM4/PlayCtrl decode step at all, the file
+        # arrives already muxed. Use get_recording() / stop_download() for
+        # this path.
+        sdk.NET_DVR_GetFileByTime_V40.argtypes = [
+            c_long,
+            c_char_p,
+            POINTER(NET_DVR_PLAYCOND)
+        ]
+        sdk.NET_DVR_GetFileByTime_V40.restype = c_long
+
+        # BOOL NET_DVR_StopGetFile(LONG lFileHandle)
+        sdk.NET_DVR_StopGetFile.argtypes = [c_long]
+        sdk.NET_DVR_StopGetFile.restype = c_bool
+
+        # LONG NET_DVR_GetDownloadPos(LONG lFileHandle)
+        # Returns 0-100 for percent complete, negative on error, 100 when done.
+        sdk.NET_DVR_GetDownloadPos.argtypes = [c_long]
+        sdk.NET_DVR_GetDownloadPos.restype = c_long
+
+        # BOOL NET_DVR_PlayBackControl_V40(LONG lPlayHandle, DWORD dwControlCode,
+        #     void *lpInBuffer, DWORD dwInSize, void *lpOutBuffer, LPDWORD lpOutSize)
+        # Used here just to issue PLAYSTART/PLAYSTOP on a download handle
+        # returned by NET_DVR_GetFileByTime_V40 (matches btnDownloadTime_Click).
+        sdk.NET_DVR_PlayBackControl_V40.argtypes = [
+            c_long,
+            c_uint,
+            c_void_p,
+            c_uint,
+            c_void_p,
+            POINTER(c_uint)
+        ]
+        sdk.NET_DVR_PlayBackControl_V40.restype = c_bool
+
         return sdk
 
     def _load_play_ctrl(self):
@@ -189,7 +276,7 @@ class HikvisionSDK:
         if not os.path.exists(self.play_ctrl_path):
             print(
                 f"[SDK] PlayCtrl.dll not found at {self.play_ctrl_path} "
-                f"— decoded live_stream() will be unavailable until it's present."
+                f"— decoded live_stream()/get_playback() will be unavailable until it's present."
             )
             return None
 
@@ -287,6 +374,52 @@ class HikvisionSDK:
         normalized_ip = self._normalize_nvr_ip(nvr_ip)
 
         return self.sessions[normalized_ip]
+
+    @staticmethod
+    def _parse_hhmm_to_net_dvr_time(value, ref_date=None, date_str=None):
+        """
+        Accepts "hh:mm" (or "hh:mm:ss") for `value`, combined with a date
+        determined as follows (first match wins):
+          1. `date_str` — explicit date in "dd-mm-yyyy" format
+          2. `ref_date` — a datetime.date object
+          3. today's date
+
+        Also still accepts a full "YYYY-MM-DD HH:MM[:SS]" string passed
+        directly as `value`, for backwards compatibility.
+
+        Returns a populated NET_DVR_TIME struct.
+        """
+
+        value = value.strip()
+
+        if " " in value:
+            # full date + time string supplied directly in `value`
+            date_part, time_part = value.split(" ", 1)
+            year, month, day = (int(x) for x in date_part.split("-"))
+        else:
+            time_part = value
+
+            if date_str is not None:
+                day, month, year = (int(x) for x in date_str.strip().split("-"))
+            else:
+                if ref_date is None:
+                    ref_date = datetime.date.today()
+                year, month, day = ref_date.year, ref_date.month, ref_date.day
+
+        time_bits = time_part.split(":")
+        hour = int(time_bits[0])
+        minute = int(time_bits[1]) if len(time_bits) > 1 else 0
+        second = int(time_bits[2]) if len(time_bits) > 2 else 0
+
+        t = NET_DVR_TIME()
+        t.dwYear = year
+        t.dwMonth = month
+        t.dwDay = day
+        t.dwHour = hour
+        t.dwMinute = minute
+        t.dwSecond = second
+
+        return t
 
     def capture_frame(self, channel: int):  # BASIC
         if channel is None:
@@ -733,6 +866,210 @@ class HikvisionSDK:
 
             return bool(ok)
 
+    # -----------------------------------------------------------------
+    # Recording download by time range — NET_DVR_GetFileByTime_V40 +
+    # NET_DVR_PlayBackControl_V40(PLAYSTART) + NET_DVR_GetDownloadPos +
+    # NET_DVR_StopGetFile.
+    #
+    # This has the NVR write the recording straight to a file on disk.
+    # There is NO client-side decode step here at all — no PlayCtrl.dll,
+    # no PlayM4_*, nothing gets decoded on this PC. The file that lands
+    # on disk is already a muxed .mp4 the NVR produced. If you need to
+    # actually view frames, open the resulting file with cv2.VideoCapture
+    # (or any player) after the download completes — that's a separate,
+    # ordinary local decode of a normal video file, not a live decode of
+    # NVR stream data.
+    # -----------------------------------------------------------------
+
+    def get_recording(
+        self,
+        nvr_ip: str,
+        channel: int,
+        start_time,              # "hh:mm" (today, or `date` if given) or "YYYY-MM-DD HH:MM[:SS]"
+        end_time,                 # same format as start_time
+        date: str = None,         # optional "dd-mm-yyyy", applied to both start_time and end_time
+        save_path: str = None,    # defaults to Download_Channel{ch}_{ts}.mp4
+        key_frames_only: bool = False
+    ):
+        """
+        Downloads recorded video for `channel` between `start_time` and
+        `end_time` directly to `save_path` via NET_DVR_GetFileByTime_V40,
+        mirroring btnDownloadTime_Click. The NVR does all the work; no
+        decoding happens on this machine.
+
+        `start_time`/`end_time` are "hh:mm" (or "hh:mm:ss") by default.
+        Pass `date="dd-mm-yyyy"` to pull recordings from a specific day
+        instead of today — e.g. get_recording(ip, 33, "09:00", "09:05",
+        date="28-07-2026"). A full "YYYY-MM-DD HH:MM[:SS]" string can
+        still be passed directly in start_time/end_time instead.
+
+        Returns the download handle (>=0) on success, or -1 on failure.
+        Use wait_for_recording()/get_download_progress() to track
+        completion, and stop_download() to cancel early.
+        """
+
+        session = self._get_session(nvr_ip)
+
+        with session["lock"]:
+
+            if channel in session["playback"]:
+                # already downloading this channel
+                return session["playback"][channel]["handle"]
+
+            struct_start = self._parse_hhmm_to_net_dvr_time(start_time, date_str=date)
+            struct_end = self._parse_hhmm_to_net_dvr_time(end_time, date_str=date)
+
+            play_cond = NET_DVR_PLAYCOND()
+            play_cond.dwChannel = channel
+            play_cond.struStartTime = struct_start
+            play_cond.struStopTime = struct_end
+            play_cond.byDrawFrame = 1 if key_frames_only else 0
+
+            if save_path is None:
+                tmp_dir = os.path.join(tempfile.gettempdir(), "nvr_downloads")
+                os.makedirs(tmp_dir, exist_ok=True)
+                save_path = os.path.join(
+                    tmp_dir,
+                    f"Download_Channel{channel}_{int(time.time())}.mp4"
+                )
+            else:
+                os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
+
+            handle = self.sdk.NET_DVR_GetFileByTime_V40(
+                session["user_id"],
+                save_path.encode("utf-8"),
+                byref(play_cond)
+            )
+
+            if handle < 0:
+                err = self.sdk.NET_DVR_GetLastError()
+                print(
+                    f"[SDK] NET_DVR_GetFileByTime_V40 failed "
+                    f"| nvr={nvr_ip} | channel={channel} | err={err}"
+                )
+                return -1
+
+            out_size = c_uint(0)
+            ok_start = self.sdk.NET_DVR_PlayBackControl_V40(
+                handle,
+                NET_DVR_PLAYSTART,
+                None,
+                0,
+                None,
+                byref(out_size)
+            )
+
+            if not ok_start:
+                err = self.sdk.NET_DVR_GetLastError()
+                print(
+                    f"[SDK] NET_DVR_PlayBackControl_V40(PLAYSTART) failed "
+                    f"| nvr={nvr_ip} | channel={channel} | err={err}"
+                )
+                self.sdk.NET_DVR_StopGetFile(handle)
+                return -1
+
+            session["playback"][channel] = {
+                "handle": handle,
+                "save_path": save_path,
+            }
+
+            print(
+                f"[SDK] Recording download started "
+                f"| nvr={nvr_ip} | channel={channel} | handle={handle} "
+                f"| date={date or 'today'} | range={start_time} -> {end_time} "
+                f"| file={save_path}"
+            )
+
+            return handle
+
+    def get_download_progress(self, nvr_ip: str, channel: int):
+        """
+        Returns (percent, save_path) for an in-progress download started
+        with get_recording(). percent is 0-100, or -1 if the channel has
+        no active/tracked download, or a negative SDK error code if the
+        device reports one.
+        """
+
+        session = self._get_session(nvr_ip)
+        entry = session["playback"].get(channel)
+
+        if entry is None:
+            return -1, None
+
+        percent = self.sdk.NET_DVR_GetDownloadPos(entry["handle"])
+
+        return percent, entry["save_path"]
+
+    def wait_for_recording(self, nvr_ip: str, channel: int, poll_interval=1.0, timeout=None):
+        """
+        Blocks until a download started with get_recording() reaches 100%
+        (or a negative/error position), then stops it and returns the
+        path of the downloaded file. Returns None on error or timeout.
+        """
+
+        waited = 0.0
+
+        while True:
+            percent, save_path = self.get_download_progress(nvr_ip, channel)
+
+            if percent < 0:
+                print(
+                    f"[SDK] Download error/no active download "
+                    f"| nvr={nvr_ip} | channel={channel} | pos={percent}"
+                )
+                self.stop_download(nvr_ip, channel)
+                return None
+
+            if percent >= 100:
+                self.stop_download(nvr_ip, channel)
+                print(
+                    f"[SDK] Download complete "
+                    f"| nvr={nvr_ip} | channel={channel} | file={save_path}"
+                )
+                return save_path
+
+            if timeout is not None and waited >= timeout:
+                print(
+                    f"[SDK] Download timed out at {percent}% "
+                    f"| nvr={nvr_ip} | channel={channel}"
+                )
+                return None
+
+            time.sleep(poll_interval)
+            waited += poll_interval
+
+    def stop_download(self, nvr_ip: str, channel: int):
+        """
+        Stops/cancels a download started with get_recording() via
+        NET_DVR_StopGetFile. Safe to call after the download has already
+        completed.
+        """
+
+        session = self._get_session(nvr_ip)
+
+        with session["lock"]:
+
+            entry = session["playback"].pop(channel, None)
+
+            if entry is None:
+                return True
+
+            ok = self.sdk.NET_DVR_StopGetFile(entry["handle"])
+
+            if not ok:
+                err = self.sdk.NET_DVR_GetLastError()
+                print(
+                    f"[SDK] NET_DVR_StopGetFile failed "
+                    f"| nvr={nvr_ip} | channel={channel} | err={err}"
+                )
+
+            print(
+                f"[SDK] Download stopped "
+                f"| nvr={nvr_ip} | channel={channel}"
+            )
+
+            return bool(ok)
+
     def scan_channels(self, nvr_ip: str, low: int = 1, high: int = 64):
         """
         Probes a range of channel numbers directly against
@@ -791,6 +1128,12 @@ class HikvisionSDK:
             for channel in list(session["live"].keys()):
                 try:
                     self.stop_real_play(nvr_ip, channel)
+                except Exception:
+                    pass
+
+            for channel in list(session["playback"].keys()):
+                try:
+                    self.stop_download(nvr_ip, channel)
                 except Exception:
                     pass
 
@@ -892,6 +1235,83 @@ class HikvisionSDK:
 #     cv2.destroyAllWindows()
 #     hik.close()
 
+
+# ------------< PLAYBACK / VIDEO RECORDING TESTS >-----------------
+# if __name__ == "__main__":
+#     from app.config.config import AppConfig
+#     cfg = AppConfig()
+
+#     ip = cfg.get("NVR", "IP")
+#     port = cfg.get("NVR", "PORT", cast=int)
+#     username = cfg.get("NVR", "USERNAME")
+#     password = cfg.get("NVR", "PASSWORD")
+#     root_path = cfg.get("PATHS", "ROOT_PATHS")
+
+#     print(f"""
+#           NVR IP: {ip}\n
+#           NVR PORT: {port}\n
+#           NVR USERNAME: {username}\n
+#           NVR PASSWORD: {password}\n
+#           """)
+
+#     hik = HikvisionSDK(
+#         nvrs=[{
+#             "ip": ip,
+#             "port": port,
+#             "username": username,
+#             "password": password
+#         }]
+#     )
+
+#     print("Session established.")
+
+#     # --- download a recording by time range (no client-side decode) ---
+#     channel = 33
+
+#     start_time = "09:00"   # "hh:mm" -> paired with `date` below
+#     end_time = "09:05"
+#     date = "27-07-2026"    # "dd-mm-yyyy" -> pull recordings from this day
+#     save_path = os.path.join(
+#         root_path,
+#         "nvr_downloads",
+#         f"test_channel{channel}_{date.replace('-', '')}.mp4"
+#     )
+
+#     handle = hik.get_recording(
+#         nvr_ip=ip,
+#         channel=channel,
+#         start_time=start_time,
+#         end_time=end_time,
+#         date=date,
+#         save_path=save_path
+#     )
+
+#     if handle < 0:
+#         print("Failed to start recording download.")
+#     else:
+#         print(f"Download started, handle={handle}. Waiting for completion...")
+
+#         # poll manually instead of using wait_for_recording(), just to show
+#         # the progress values as they come in
+#         while True:
+#             percent, path = hik.get_download_progress(ip, channel)
+
+#             if percent < 0:
+#                 print(f"Download error/stopped, pos={percent}")
+#                 break
+
+#             print(f"Download progress: {percent}%")
+
+#             if percent >= 100:
+#                 hik.stop_download(ip, channel)
+#                 print(f"Download complete -> {path}")
+#                 break
+
+#             time.sleep(1)
+
+#     hik.close()
+#     print("Session closed.")
+
 # ------------< CAPTURE FRAME BUFFER TESTS >-----------------
 # if __name__ == "__main__":
 
@@ -935,7 +1355,7 @@ class HikvisionSDK:
 #     print("Session closed.")
 
 
-# ------------< CAPTURE FRAME BUFFER TESTS >-----------------
+# ------------< CAPTURE FRAME FILE TESTS >-----------------
 # if __name__ == "__main__":
 
 #     from app.config.config import AppConfig
