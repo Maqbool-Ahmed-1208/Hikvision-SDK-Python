@@ -18,30 +18,30 @@ class HikvisionDownloaderGUI:
 
         self.root = root
         self.root.title("Hikvision Recording Downloader")
-        self.root.geometry("800x600")
+        self.root.geometry("800x650")
         self.root.resizable(False, False)
         
         # Dark Teal Blue Theme Colors
         self.colors = {
-            'bg': '#0a1e2b',              # Dark teal blue background
-            'bg_light': '#123140',         # Slightly lighter teal
-            'bg_lighter': '#1a4054',       # Even lighter teal
-            'fg': '#e0f0f5',               # Light teal text
-            'fg_dim': '#8ab4c9',           # Dimmer teal text
-            'accent_primary': '#00b4d8',   # Bright teal blue
-            'accent_secondary': '#0077b6', # Deep teal blue
-            'accent_hover': '#48cae4',     # Lighter teal for hover
-            'button': '#1a4054',           # Teal button
-            'button_hover': '#2a5a7a',     # Hover button
-            'entry_bg': '#0d2a3d',          # Entry background
-            'entry_fg': '#e0f0f5',          # Entry text
-            'frame_bg': '#0a1e2b',          # Frame background
-            'border': '#1a4054',            # Border color
-            'progress_bg': '#0d2a3d',       # Progress background
-            'progress_fg': '#00b4d8',       # Progress foreground
-            'title': '#00b4d8',             # Title color
-            'success': '#00d4a0',           # Success green
-            'error': '#ff6b6b'              # Error red
+            'bg': '#0a1e2b',
+            'bg_light': '#123140',
+            'bg_lighter': '#1a4054',
+            'fg': '#e0f0f5',
+            'fg_dim': '#8ab4c9',
+            'accent_primary': '#00b4d8',
+            'accent_secondary': '#0077b6',
+            'accent_hover': '#48cae4',
+            'button': '#1a4054',
+            'button_hover': '#2a5a7a',
+            'entry_bg': '#0d2a3d',
+            'entry_fg': '#e0f0f5',
+            'frame_bg': '#0a1e2b',
+            'border': '#1a4054',
+            'progress_bg': '#0d2a3d',
+            'progress_fg': '#00b4d8',
+            'title': '#00b4d8',
+            'success': '#00d4a0',
+            'error': '#ff6b6b'
         }
         
         self.root.configure(bg=self.colors['bg'])
@@ -100,7 +100,7 @@ class HikvisionDownloaderGUI:
                            background=self.colors['progress_fg'],
                            troughcolor=self.colors['progress_bg'],
                            borderwidth=2,
-                           thickness=15)
+                           thickness=20)
         
         # Custom style for small entry boxes
         self.style.configure('Small.TEntry',
@@ -122,6 +122,8 @@ class HikvisionDownloaderGUI:
 
         self.hik = None
         self.logged_in = False
+        self.downloading = False  # Flag to track download status
+        self.stop_download = False  # Flag to stop download
 
         self.build_ui()
 
@@ -260,6 +262,7 @@ class HikvisionDownloaderGUI:
         try:
 
             self.status.set("Connecting to NVR...")
+            self.progress['value'] = 0
 
             self.hik = HikvisionSDK(
                 nvrs=[
@@ -522,19 +525,27 @@ class HikvisionDownloaderGUI:
         self.login_btn = ttk.Button(
             button_frame,
             text="🔑 Login to NVR",
-            width=20,
+            width=18,
             command=self.login_nvr
         )
-        self.login_btn.pack(side="left", padx=10)
+        self.login_btn.pack(side="left", padx=5)
         
         self.download_btn = ttk.Button(
             button_frame,
             text="⬇️ Download Recording",
-            width=20,
+            width=26,
             command=self.start_download,
             state=tk.DISABLED
         )
-        self.download_btn.pack(side="left", padx=10)
+        self.download_btn.pack(side="left", padx=5)
+        
+        self.quit_btn = ttk.Button(
+            button_frame,
+            text="🚪 Quit & Logout",
+            width=18,
+            command=self.quit_application
+        )
+        self.quit_btn.pack(side="left", padx=5)
         
         # Progress Frame
         frame2 = ttk.LabelFrame(main_container, text="📊 Progress", padding=20)
@@ -548,6 +559,14 @@ class HikvisionDownloaderGUI:
             style="TProgressbar"
         )
         self.progress.pack(fill="x", pady=(0, 10))
+        
+        # Add percentage label
+        self.progress_label = tk.Label(frame2,
+                                      text="0%",
+                                      font=('Segoe UI', 10, 'bold'),
+                                      fg=self.colors['accent_primary'],
+                                      bg=self.colors['bg'])
+        self.progress_label.pack(anchor="e", pady=(0, 5))
         
         self.status = tk.StringVar(value="🟢 Ready")
         self.status_label = tk.Label(frame2, 
@@ -605,6 +624,15 @@ class HikvisionDownloaderGUI:
             messagebox.showerror("Validation Error", "Start time must be before end time.")
             return
 
+        # Disable download button during download
+        self.download_btn.config(state=tk.DISABLED)
+        self.downloading = True
+        self.stop_download = False
+        
+        # Reset progress
+        self.progress['value'] = 0
+        self.progress_label.config(text="0%")
+        
         threading.Thread(
             target=self.download_recording,
             daemon=True,
@@ -613,14 +641,30 @@ class HikvisionDownloaderGUI:
     ##############################################################
 
     def update_progress(self, percent, text):
-
+        """Update progress bar and status text"""
         self.root.after(
             0,
-            lambda: (
-                self.progress.configure(value=percent),
-                self.status.set(text),
-            ),
+            lambda: self._update_progress_safe(percent, text)
         )
+    
+    def _update_progress_safe(self, percent, text):
+        """Safe progress update in main thread"""
+        if percent < 0:
+            percent = 0
+        elif percent > 100:
+            percent = 100
+            
+        self.progress.configure(value=percent)
+        self.progress_label.config(text=f"{percent:.0f}%")
+        self.status.set(text)
+        
+        # Update color based on progress
+        if percent == 100:
+            self.status_label.configure(foreground=self.colors['success'])
+        elif percent > 0:
+            self.status_label.configure(foreground=self.colors['fg'])
+        else:
+            self.status_label.configure(foreground=self.colors['fg_dim'])
 
     ##############################################################
 
@@ -628,10 +672,12 @@ class HikvisionDownloaderGUI:
 
         try:
             if not self.logged_in:
-                messagebox.showerror(
+                self.root.after(0, lambda: messagebox.showerror(
                     "Not Logged In",
                     "Please login to the NVR first."
-                )
+                ))
+                self.downloading = False
+                self.download_btn.config(state=tk.NORMAL)
                 return
 
             camera_ip = self.get_camera_ip()
@@ -649,16 +695,20 @@ class HikvisionDownloaderGUI:
             )
 
             if channel is None:
-                messagebox.showerror(
+                self.root.after(0, lambda: messagebox.showerror(
                     "Error",
                     "Camera channel not found.",
-                )
+                ))
+                self.downloading = False
+                self.download_btn.config(state=tk.NORMAL)
                 return
 
             save_path = os.path.join(
                 output_dir,
                 f"{camera_ip}_{channel}_{date.replace('-','')}.mp4",
             )
+
+            self.update_progress(5, "⏳ Starting download...")
 
             handle = self.hik.get_recording(
                 nvr_ip=self.nvr_ip,
@@ -670,15 +720,14 @@ class HikvisionDownloaderGUI:
             )
 
             if handle < 0:
-
-                self.update_progress(
-                    0,
-                    "❌ Failed to start download.",
-                )
-
+                self.update_progress(0, "❌ Failed to start download.")
+                self.downloading = False
+                self.download_btn.config(state=tk.NORMAL)
                 return
 
-            while True:
+            last_percent = 0
+            
+            while not self.stop_download:
 
                 percent, path = self.hik.get_download_progress(
                     self.nvr_ip,
@@ -686,49 +735,78 @@ class HikvisionDownloaderGUI:
                 )
 
                 if percent < 0:
-
-                    self.update_progress(
-                        0,
-                        "❌ Download failed.",
-                    )
-
+                    self.update_progress(0, "❌ Download failed.")
                     break
 
-                self.update_progress(
-                    percent,
-                    f"⏳ Downloading... {percent:.0f}%",
-                )
+                # Only update if percent changed (reduce UI updates)
+                if abs(percent - last_percent) >= 1 or percent >= 100:
+                    self.update_progress(percent, f"⏳ Downloading... {percent:.0f}%")
+                    last_percent = percent
 
                 if percent >= 100:
-
                     self.hik.stop_download(
                         self.nvr_ip,
                         channel,
                     )
-
-                    self.update_progress(
-                        100,
-                        f"✅ Completed\n{path}",
-                    )
-
+                    self.update_progress(100, f"✅ Completed\n{path}")
                     break
 
-                time.sleep(1)
+                time.sleep(0.5)  # Check every 500ms
+
+            # Check if stopped by user
+            if self.stop_download:
+                self.hik.stop_download(self.nvr_ip, channel)
+                self.update_progress(0, "⏹️ Download stopped by user.")
 
         except Exception as e:
+            self.update_progress(0, f"❌ {str(e)}")
+        
+        finally:
+            self.downloading = False
+            self.download_btn.config(state=tk.NORMAL if self.logged_in else tk.DISABLED)
 
-            self.update_progress(
-                0,
-                f"❌ {str(e)}",
-            )
+    ##############################################################
+    
+    def quit_application(self):
+        """Quit application and logout from NVR"""
+        if self.downloading:
+            # Ask user if they want to stop the download
+            if not messagebox.askyesno("Download in Progress", 
+                                      "A download is currently in progress. Stop download and quit?"):
+                return
+            self.stop_download = True
+        
+        # Logout from NVR
+        if self.hik is not None:
+            try:
+                self.status.set("Logging out...")
+                self.hik.close()
+                self.logged_in = False
+                self.status.set("Logged out ✓")
+                messagebox.showinfo("Success", "Successfully logged out from NVR.")
+            except Exception as e:
+                messagebox.showerror("Logout Error", f"Error during logout: {e}")
+        
+        # Destroy the window
+        self.root.destroy()
 
     ##############################################################
 
     def on_close(self):
+        """Handle window close event"""
+        if self.downloading:
+            if messagebox.askyesno("Download in Progress", 
+                                  "A download is currently in progress. Stop download and exit?"):
+                self.stop_download = True
+                # Wait a moment for the download thread to stop
+                time.sleep(0.5)
+            else:
+                return
 
         if self.hik is not None:
             try:
                 self.hik.close()
+                self.logged_in = False
             except Exception:
                 pass
 
