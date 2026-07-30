@@ -18,7 +18,7 @@ class HikvisionDownloaderGUI:
 
         self.root = root
         self.root.title("Hikvision Recording Downloader")
-        self.root.geometry("800x650")
+        self.root.geometry("800x700")
         self.root.resizable(False, False)
         
         # Dark Teal Blue Theme Colors
@@ -97,8 +97,8 @@ class HikvisionDownloaderGUI:
                            font=('Segoe UI', 10),
                            padding=(5, 3),
                            cursor="xterm",
-                           insertcolor=self.colors['accent_primary'],  # Blinking cursor color
-                           insertwidth=2)  # Cursor width
+                           insertcolor=self.colors['accent_primary'],
+                           insertwidth=2)
         
         self.style.map('TEntry',
                       bordercolor=[('focus', self.colors['accent_primary'])])
@@ -119,8 +119,8 @@ class HikvisionDownloaderGUI:
                            padding=(3, 2),
                            width=8,
                            cursor="xterm",
-                           insertcolor=self.colors['accent_primary'],  # Blinking cursor color
-                           insertwidth=2)  # Cursor width
+                           insertcolor=self.colors['accent_primary'],
+                           insertwidth=2)
 
         cfg = AppConfig()
 
@@ -363,8 +363,7 @@ class HikvisionDownloaderGUI:
         self.camera_ip_1 = ttk.Entry(ip_frame, style='Small.TEntry', width=5)
         self.camera_ip_1.pack(side="left", padx=2)
         self.camera_ip_1.insert(0, "192")
-        self.camera_ip_1.focus_set()  # Set focus to first entry
-        # Select all text on focus
+        self.camera_ip_1.focus_set()
         self.camera_ip_1.bind('<FocusIn>', lambda e: self.camera_ip_1.select_range(0, tk.END))
         
         dot_label1 = tk.Label(ip_frame, 
@@ -545,7 +544,7 @@ class HikvisionDownloaderGUI:
                              cursor="xterm")
         time_hint2.pack(side="left", padx=(5, 0))
 
-        # Output Frame
+        # Output Directory Frame
         out = ttk.LabelFrame(main_container, text="📁 Output Directory", padding=20)
         out.pack(fill="x", pady=(0, 15))
         
@@ -566,6 +565,34 @@ class HikvisionDownloaderGUI:
             width=10
         )
         browse_btn.grid(row=0, column=1, pady=5)
+
+        # Filename (Optional) Frame
+        filename_frame = ttk.LabelFrame(main_container, text="📝 Filename (Optional)", padding=20)
+        filename_frame.pack(fill="x", pady=(0, 15))
+        
+        filename_inner_frame = ttk.Frame(filename_frame)
+        filename_inner_frame.pack(fill="x")
+        
+        filename_label = tk.Label(filename_inner_frame, 
+                                 text="Custom Filename:",
+                                 font=('Segoe UI', 10),
+                                 fg=self.colors['fg'],
+                                 bg=self.colors['bg'],
+                                 cursor="xterm")
+        filename_label.pack(side="left", padx=(0, 15))
+        
+        self.custom_filename = ttk.Entry(filename_inner_frame, width=40)
+        self.custom_filename.pack(side="left", padx=2, fill="x", expand=True)
+        self.custom_filename.insert(0, "")  # Empty by default
+        self.custom_filename.bind('<FocusIn>', lambda e: self.custom_filename.select_range(0, tk.END))
+        
+        filename_hint = tk.Label(filename_inner_frame, 
+                                text="(Leave empty for auto-generated name)",
+                                fg=self.colors['fg_dim'],
+                                bg=self.colors['bg'],
+                                font=('Segoe UI', 8),
+                                cursor="xterm")
+        filename_hint.pack(side="left", padx=(10, 0))
 
         # Button Frame
         button_frame = ttk.Frame(main_container)
@@ -639,7 +666,7 @@ class HikvisionDownloaderGUI:
             self.date_day, self.date_month, self.date_year,
             self.start_hour, self.start_minute,
             self.end_hour, self.end_minute,
-            self.output
+            self.output, self.custom_filename
         ]
         
         for i, entry in enumerate(entries):
@@ -775,6 +802,10 @@ class HikvisionDownloaderGUI:
             start = self.get_start_time()
             end = self.get_end_time()
             output_dir = self.output.get().strip()
+            
+            # Get custom filename or use default
+            custom_filename = self.custom_filename.get().strip()
+            filename = custom_filename if custom_filename else ""
 
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
@@ -794,14 +825,22 @@ class HikvisionDownloaderGUI:
                 self.root.config(cursor="arrow")
                 return
 
-            current_time = datetime.now().strftime("%H%M%S")
+            # Build filename based on custom name or auto-generate
+            if filename:
+                # Use custom filename with timestamp
+                current_time = datetime.now().strftime("%H%M%S")
+                save_path = os.path.join(
+                    output_dir,
+                    f"{camera_ip}_{filename}_{date.replace('-', '')}_{current_time}.mp4"
+                )
+            else:
+                # Auto-generate filename
+                save_path = os.path.join(
+                    output_dir,
+                    f"{camera_ip}_{date.replace('-','')}_{current_time}.mp4",
+                )
 
-            save_path = os.path.join(
-                output_dir,
-                f"{camera_ip}_{channel}_{date.replace('-', '')}_{current_time}.mp4",
-            )
-
-            self.update_progress(5, "⏳ Starting download...")
+            self.update_progress(5, f"⏳ Starting download...\nFilename: {os.path.basename(save_path)}")
 
             handle = self.hik.get_recording(
                 nvr_ip=self.nvr_ip,
