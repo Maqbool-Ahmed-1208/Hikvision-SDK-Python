@@ -794,9 +794,11 @@ class HikvisionDownloaderGUI:
                 self.root.config(cursor="arrow")
                 return
 
+            current_time = datetime.now().strftime("%H%M%S")
+
             save_path = os.path.join(
                 output_dir,
-                f"{camera_ip}_{channel}_{date.replace('-','')}.mp4",
+                f"{camera_ip}_{channel}_{date.replace('-', '')}_{current_time}.mp4",
             )
 
             self.update_progress(5, "⏳ Starting download...")
