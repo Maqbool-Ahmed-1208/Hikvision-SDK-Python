@@ -18,7 +18,7 @@ class HikvisionDownloaderGUI:
 
         self.root = root
         self.root.title("Hikvision Recording Downloader")
-        self.root.geometry("850x720")
+        self.root.geometry("880x755")
         self.root.resizable(False, False)
         
         # Dark Teal Blue Theme Colors
