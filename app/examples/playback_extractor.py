@@ -18,7 +18,7 @@ class HikvisionDownloaderGUI:
 
         self.root = root
         self.root.title("Hikvision Recording Downloader")
-        self.root.geometry("800x700")
+        self.root.geometry("850x720")
         self.root.resizable(False, False)
         
         # Dark Teal Blue Theme Colors
@@ -159,16 +159,18 @@ class HikvisionDownloaderGUI:
         return f"{day}-{month}-{year}"
     
     def get_start_time(self):
-        """Get start time in HH:MM format"""
+        """Get start time in HH:MM:SS format"""
         hour = self.start_hour.get().strip().zfill(2)
         minute = self.start_minute.get().strip().zfill(2)
-        return f"{hour}:{minute}"
+        second = self.start_second.get().strip().zfill(2)
+        return f"{hour}:{minute}:{second}"
     
     def get_end_time(self):
-        """Get end time in HH:MM format"""
+        """Get end time in HH:MM:SS format"""
         hour = self.end_hour.get().strip().zfill(2)
         minute = self.end_minute.get().strip().zfill(2)
-        return f"{hour}:{minute}"
+        second = self.end_second.get().strip().zfill(2)
+        return f"{hour}:{minute}:{second}"
     
     def validate_ip_part(self, part):
         """Validate IP address part (0-255)"""
@@ -191,7 +193,7 @@ class HikvisionDownloaderGUI:
             return False
     
     def validate_time_part(self, part, min_val, max_val):
-        """Validate time part (hour/minute)"""
+        """Validate time part (hour/minute/second)"""
         if not part:
             return False
         try:
@@ -244,19 +246,23 @@ class HikvisionDownloaderGUI:
         
         return True, ""
     
-    def validate_time_fields(self, hour_part, minute_part, field_name):
-        """Validate time fields"""
+    def validate_time_fields(self, hour_part, minute_part, second_part, field_name):
+        """Validate time fields (HH:MM:SS)"""
         hour = hour_part.get().strip()
         minute = minute_part.get().strip()
+        second = second_part.get().strip()
         
-        if not hour or not minute:
-            return False, f"All {field_name} fields are required"
+        if not hour or not minute or not second:
+            return False, f"All {field_name} time fields are required"
         
         if not self.validate_time_part(hour, 0, 23):
             return False, f"Invalid {field_name} hour: must be 0-23"
         
         if not self.validate_time_part(minute, 0, 59):
             return False, f"Invalid {field_name} minute: must be 0-59"
+        
+        if not self.validate_time_part(second, 0, 59):
+            return False, f"Invalid {field_name} second: must be 0-59"
         
         return True, ""
 
@@ -464,7 +470,7 @@ class HikvisionDownloaderGUI:
                             cursor="xterm")
         date_hint.pack(side="left", padx=(10, 0))
         
-        # Time with separate boxes
+        # Time with separate boxes (HH:MM:SS)
         time_frame = ttk.Frame(frame)
         time_frame.pack(fill="x", pady=8)
         
@@ -473,7 +479,7 @@ class HikvisionDownloaderGUI:
         start_frame.pack(side="left", padx=(0, 30))
         
         start_label = tk.Label(start_frame, 
-                              text="Start:",
+                              text="Start Time:",
                               font=('Segoe UI', 10),
                               fg=self.colors['fg'],
                               bg=self.colors['bg'],
@@ -498,8 +504,21 @@ class HikvisionDownloaderGUI:
         self.start_minute.insert(0, "00")
         self.start_minute.bind('<FocusIn>', lambda e: self.start_minute.select_range(0, tk.END))
         
+        colon_label1b = tk.Label(start_frame, 
+                                text=":",
+                                font=('Segoe UI', 14, 'bold'),
+                                fg=self.colors['accent_primary'],
+                                bg=self.colors['bg'],
+                                cursor="xterm")
+        colon_label1b.pack(side="left")
+        
+        self.start_second = ttk.Entry(start_frame, style='Small.TEntry', width=4)
+        self.start_second.pack(side="left", padx=2)
+        self.start_second.insert(0, "00")
+        self.start_second.bind('<FocusIn>', lambda e: self.start_second.select_range(0, tk.END))
+        
         time_hint = tk.Label(start_frame, 
-                            text="(HH:MM)",
+                            text="(HH:MM:SS)",
                             fg=self.colors['fg_dim'],
                             bg=self.colors['bg'],
                             font=('Segoe UI', 8),
@@ -511,7 +530,7 @@ class HikvisionDownloaderGUI:
         end_frame.pack(side="left")
         
         end_label = tk.Label(end_frame, 
-                            text="End:",
+                            text="End Time:",
                             font=('Segoe UI', 10),
                             fg=self.colors['fg'],
                             bg=self.colors['bg'],
@@ -536,8 +555,21 @@ class HikvisionDownloaderGUI:
         self.end_minute.insert(0, "05")
         self.end_minute.bind('<FocusIn>', lambda e: self.end_minute.select_range(0, tk.END))
         
+        colon_label2b = tk.Label(end_frame, 
+                                text=":",
+                                font=('Segoe UI', 14, 'bold'),
+                                fg=self.colors['accent_primary'],
+                                bg=self.colors['bg'],
+                                cursor="xterm")
+        colon_label2b.pack(side="left")
+        
+        self.end_second = ttk.Entry(end_frame, style='Small.TEntry', width=4)
+        self.end_second.pack(side="left", padx=2)
+        self.end_second.insert(0, "00")
+        self.end_second.bind('<FocusIn>', lambda e: self.end_second.select_range(0, tk.END))
+        
         time_hint2 = tk.Label(end_frame, 
-                             text="(HH:MM)",
+                             text="(HH:MM:SS)",
                              fg=self.colors['fg_dim'],
                              bg=self.colors['bg'],
                              font=('Segoe UI', 8),
@@ -583,7 +615,7 @@ class HikvisionDownloaderGUI:
         
         self.custom_filename = ttk.Entry(filename_inner_frame, width=40)
         self.custom_filename.pack(side="left", padx=2, fill="x", expand=True)
-        self.custom_filename.insert(0, "")  # Empty by default
+        self.custom_filename.insert(0, "")
         self.custom_filename.bind('<FocusIn>', lambda e: self.custom_filename.select_range(0, tk.END))
         
         filename_hint = tk.Label(filename_inner_frame, 
@@ -664,8 +696,8 @@ class HikvisionDownloaderGUI:
         entries = [
             self.camera_ip_1, self.camera_ip_2, self.camera_ip_3, self.camera_ip_4,
             self.date_day, self.date_month, self.date_year,
-            self.start_hour, self.start_minute,
-            self.end_hour, self.end_minute,
+            self.start_hour, self.start_minute, self.start_second,
+            self.end_hour, self.end_minute, self.end_second,
             self.output, self.custom_filename
         ]
         
@@ -713,14 +745,14 @@ class HikvisionDownloaderGUI:
             messagebox.showerror("Validation Error", msg)
             return
         
-        # Validate Start Time
-        valid, msg = self.validate_time_fields(self.start_hour, self.start_minute, "start")
+        # Validate Start Time (with seconds)
+        valid, msg = self.validate_time_fields(self.start_hour, self.start_minute, self.start_second, "start")
         if not valid:
             messagebox.showerror("Validation Error", msg)
             return
         
-        # Validate End Time
-        valid, msg = self.validate_time_fields(self.end_hour, self.end_minute, "end")
+        # Validate End Time (with seconds)
+        valid, msg = self.validate_time_fields(self.end_hour, self.end_minute, self.end_second, "end")
         if not valid:
             messagebox.showerror("Validation Error", msg)
             return
@@ -728,10 +760,15 @@ class HikvisionDownloaderGUI:
         # Validate start time < end time
         start_hour = int(self.start_hour.get().strip())
         start_minute = int(self.start_minute.get().strip())
+        start_second = int(self.start_second.get().strip())
         end_hour = int(self.end_hour.get().strip())
         end_minute = int(self.end_minute.get().strip())
+        end_second = int(self.end_second.get().strip())
         
-        if start_hour > end_hour or (start_hour == end_hour and start_minute >= end_minute):
+        start_total_seconds = start_hour * 3600 + start_minute * 60 + start_second
+        end_total_seconds = end_hour * 3600 + end_minute * 60 + end_second
+        
+        if start_total_seconds >= end_total_seconds:
             messagebox.showerror("Validation Error", "Start time must be before end time.")
             return
 
@@ -831,13 +868,13 @@ class HikvisionDownloaderGUI:
                 current_time = datetime.now().strftime("%H%M%S")
                 save_path = os.path.join(
                     output_dir,
-                    f"{camera_ip}_{filename}_{date.replace('-', '')}_{current_time}.mp4"
+                    f"{filename}_{date.replace('-', '')}_{current_time}.mp4"
                 )
             else:
                 # Auto-generate filename
                 save_path = os.path.join(
                     output_dir,
-                    f"{camera_ip}_{date.replace('-','')}_{current_time}.mp4",
+                    f"{camera_ip}_{channel}_{date.replace('-','')}.mp4",
                 )
 
             self.update_progress(5, f"⏳ Starting download...\nFilename: {os.path.basename(save_path)}")

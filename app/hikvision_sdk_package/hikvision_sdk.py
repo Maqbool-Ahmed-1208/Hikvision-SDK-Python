@@ -1245,7 +1245,7 @@ class HikvisionSDK:
 #     port = cfg.get("NVR", "PORT", cast=int)
 #     username = cfg.get("NVR", "USERNAME")
 #     password = cfg.get("NVR", "PASSWORD")
-#     root_path = cfg.get("PATHS", "ROOT_PATHS")
+#     root_path = cfg.get("PATHS", "ROOT")
 
 #     print(f"""
 #           NVR IP: {ip}\n
