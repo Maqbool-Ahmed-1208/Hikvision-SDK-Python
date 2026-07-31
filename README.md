@@ -37,8 +37,15 @@ Designed for production computer vision systems where thousands of frame capture
 ├── app/
 │   ├── config/
 │   │   ├── config.cfg
+│   │   ├── camera_channel_mapping.json # Run nvr_camera_channel_mapping.py to generate this file.
 │   │   └── config.py
 │   │
+│   ├── examples/
+│   │   └── playback_extractor.py
+│   │
+│   ├── gui_images/
+│   │   └── nvr_playback_downloader.png
+|   |
 │   ├── hikvision_sdk_package/
 │   │   ├── bin/
 │   │   │   ├── ClientDemoDll/
@@ -52,6 +59,9 @@ Designed for production computer vision systems where thousands of frame capture
 │   │
 │   └── utils/
 │       └── helper_functions.py
+│
+├── run_examples/
+│   └── run_playback_extractor.bat
 │
 ├── LICENSE
 ├── README.md
@@ -109,6 +119,7 @@ PASSWORD = your_password
 | `hikvision_sdk.py`              | Main SDK wrapper            |
 | `nvr_camera_channel_mapping.py` | Camera IP ↔ Channel mapping |
 | `helper_functions.py`           | Utility functions           |
+| `playback_extractor.py`         | GUI based Playback extractor|
 | `config.py`                     | Configuration loader        |
 
 ---
@@ -232,7 +243,7 @@ ip = cfg.get("NVR", "IP")
 port = cfg.get("NVR", "PORT", cast=int)
 username = cfg.get("NVR", "USERNAME")
 password = cfg.get("NVR", "PASSWORD")
-root_path = cfg.get("PATHS", "ROOT_PATHS")
+root_path = cfg.get("PATHS", "ROOT")
 
 print(f"""
         NVR IP: {ip}\n
@@ -303,6 +314,7 @@ print("Session closed.")
 <p align="center">
   <img src="app\gui_images\nvr_playback_downloader.png" width="800">
 </p>
+
 ---
 
 ## 5. Capture Frame (Memory Buffer)
