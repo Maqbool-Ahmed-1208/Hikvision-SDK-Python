@@ -300,7 +300,9 @@ hik.close()
 print("Session closed.")
 
 ```
-
+<p align="center">
+  <img src="app\gui_images\nvr_playback_downloader.png" width="800">
+</p>
 ---
 
 ## 5. Capture Frame (Memory Buffer)
