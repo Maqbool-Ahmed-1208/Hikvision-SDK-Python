@@ -15,7 +15,7 @@ from app.hikvision_sdk_package.nvr_camera_channel_mapping import get_camera_chan
 class HikvisionDownloaderGUI:
 
     def __init__(self, root):
-
+        self.now = datetime.now()
         self.root = root
         self.root.title("Hikvision Recording Downloader")
         self.root.geometry("880x755")
@@ -395,7 +395,7 @@ class HikvisionDownloaderGUI:
         
         self.camera_ip_3 = ttk.Entry(ip_frame, style='Small.TEntry', width=5)
         self.camera_ip_3.pack(side="left", padx=2)
-        self.camera_ip_3.insert(0, "1")
+        self.camera_ip_3.insert(0, "100")
         self.camera_ip_3.bind('<FocusIn>', lambda e: self.camera_ip_3.select_range(0, tk.END))
         
         dot_label3 = tk.Label(ip_frame, 
@@ -408,7 +408,7 @@ class HikvisionDownloaderGUI:
         
         self.camera_ip_4 = ttk.Entry(ip_frame, style='Small.TEntry', width=5)
         self.camera_ip_4.pack(side="left", padx=2)
-        self.camera_ip_4.insert(0, "101")
+        self.camera_ip_4.insert(0, "116")
         self.camera_ip_4.bind('<FocusIn>', lambda e: self.camera_ip_4.select_range(0, tk.END))
         
         hint_label = tk.Label(ip_frame, 
@@ -433,7 +433,7 @@ class HikvisionDownloaderGUI:
         
         self.date_day = ttk.Entry(date_frame, style='Small.TEntry', width=4)
         self.date_day.pack(side="left", padx=2)
-        self.date_day.insert(0, "27")
+        self.date_day.insert(0, str(self.now.day))
         self.date_day.bind('<FocusIn>', lambda e: self.date_day.select_range(0, tk.END))
         
         dash_label1 = tk.Label(date_frame, 
@@ -446,7 +446,7 @@ class HikvisionDownloaderGUI:
         
         self.date_month = ttk.Entry(date_frame, style='Small.TEntry', width=4)
         self.date_month.pack(side="left", padx=2)
-        self.date_month.insert(0, "07")
+        self.date_month.insert(0, str(self.now.month))
         self.date_month.bind('<FocusIn>', lambda e: self.date_month.select_range(0, tk.END))
         
         dash_label2 = tk.Label(date_frame, 
@@ -459,7 +459,7 @@ class HikvisionDownloaderGUI:
         
         self.date_year = ttk.Entry(date_frame, style='Small.TEntry', width=6)
         self.date_year.pack(side="left", padx=2)
-        self.date_year.insert(0, "2026")
+        self.date_year.insert(0, str(self.now.year))
         self.date_year.bind('<FocusIn>', lambda e: self.date_year.select_range(0, tk.END))
         
         date_hint = tk.Label(date_frame, 
@@ -488,7 +488,7 @@ class HikvisionDownloaderGUI:
         
         self.start_hour = ttk.Entry(start_frame, style='Small.TEntry', width=4)
         self.start_hour.pack(side="left", padx=2)
-        self.start_hour.insert(0, "09")
+        self.start_hour.insert(0, "00")
         self.start_hour.bind('<FocusIn>', lambda e: self.start_hour.select_range(0, tk.END))
         
         colon_label1 = tk.Label(start_frame, 
@@ -539,7 +539,7 @@ class HikvisionDownloaderGUI:
         
         self.end_hour = ttk.Entry(end_frame, style='Small.TEntry', width=4)
         self.end_hour.pack(side="left", padx=2)
-        self.end_hour.insert(0, "09")
+        self.end_hour.insert(0, "00")
         self.end_hour.bind('<FocusIn>', lambda e: self.end_hour.select_range(0, tk.END))
         
         colon_label2 = tk.Label(end_frame, 
@@ -552,7 +552,7 @@ class HikvisionDownloaderGUI:
         
         self.end_minute = ttk.Entry(end_frame, style='Small.TEntry', width=4)
         self.end_minute.pack(side="left", padx=2)
-        self.end_minute.insert(0, "05")
+        self.end_minute.insert(0, "00")
         self.end_minute.bind('<FocusIn>', lambda e: self.end_minute.select_range(0, tk.END))
         
         colon_label2b = tk.Label(end_frame, 
