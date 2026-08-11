@@ -9,6 +9,7 @@ from app.config.config import AppConfig
 
 cfg = AppConfig()
 
+
 CHANNEL_MAPPING_PATH = cfg.get("PATHS", "CHANNEL_MAPPING_PATH")
 
 
@@ -17,10 +18,45 @@ def build_camera_channel_mapping(
     username: str,
     password: str,
     output_file: str = CHANNEL_MAPPING_PATH,
-    timeout: int = 10
+    timeout: int = 10,
+    sdk: object = None
 ):
+    # ==========================================================
+    # SCAN ACTIVE CHANNELS
+    # ==========================================================
+    active_channels = sdk.scan_channels(
+        nvr_ip=nvr_ip,
+        low=1,
+        high=128
+    )
 
-    url = f"http://{nvr_ip}/ISAPI/ContentMgmt/InputProxy/channels"
+    if not active_channels:
+        return {
+            "error": f"No active channels found for NVR {nvr_ip}"
+        }
+
+    # Ensure sorted integer channel numbers
+    active_channels = sorted(
+        int(ch) for ch in active_channels
+    )
+
+    # Actual starting channel detected by SDK
+    start_channel = active_channels[0]
+
+    print(
+        f"[{nvr_ip}] Active channels: "
+        f"{active_channels}"
+    )
+
+    print(
+        f"[{nvr_ip}] Channel sequence starts from: "
+        f"{start_channel}"
+    )
+
+    url = (
+        f"http://{nvr_ip}"
+        f"/ISAPI/ContentMgmt/InputProxy/channels"
+    )
 
     try:
 
@@ -34,15 +70,17 @@ def build_camera_channel_mapping(
 
         root = ET.fromstring(r.text)
 
-        # ==========================================
+        # ======================================================
         # AUTO-DETECT XML NAMESPACE
-        # ==========================================
+        # ======================================================
         namespace = ""
 
         if root.tag.startswith("{"):
             namespace = root.tag.split("}")[0].strip("{")
 
-        ns = {"ns": namespace} if namespace else {}
+        ns = {
+            "ns": namespace
+        } if namespace else {}
 
         nvr_key = nvr_ip.replace(".", "")
 
@@ -50,14 +88,25 @@ def build_camera_channel_mapping(
             nvr_key: {}
         }
 
-        # ==========================================
+        # ======================================================
         # FIND CHANNELS
-        # ==========================================
+        # ======================================================
         if namespace:
-            channels = root.findall("ns:InputProxyChannel", ns)
-        else:
-            channels = root.findall("InputProxyChannel")
 
+            channels = root.findall(
+                "ns:InputProxyChannel",
+                ns
+            )
+
+        else:
+
+            channels = root.findall(
+                "InputProxyChannel"
+            )
+
+        # ======================================================
+        # BUILD MAPPING
+        # ======================================================
         for ch in channels:
 
             if namespace:
@@ -89,16 +138,28 @@ def build_camera_channel_mapping(
             if not ip:
                 continue
 
+            if not channel_id:
+                continue
+
+            if not str(channel_id).isdigit():
+                continue
+
+            channel_id = int(channel_id)
+
+            # ==================================================
+            # ONLY USE CHANNELS FOUND BY SDK
+            # ==================================================
+            if channel_id not in active_channels:
+                continue
+
             result[nvr_key][ip] = {
-                "channel": int(channel_id)
-                if channel_id and str(channel_id).isdigit()
-                else None,
+                "channel": channel_id,
                 "name": name
             }
 
-        # ==========================================
+        # ======================================================
         # MERGE WITH EXISTING FILE
-        # ==========================================
+        # ======================================================
         if os.path.exists(output_file):
 
             with open(
@@ -110,10 +171,14 @@ def build_camera_channel_mapping(
                 existing = json.load(f)
 
         else:
+
             existing = {}
 
         existing.update(result)
 
+        # ======================================================
+        # SAVE
+        # ======================================================
         with open(
             output_file,
             "w",
@@ -164,15 +229,27 @@ def get_camera_channel(
 
 # if __name__ == "__main__":
 
+#     from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
 #     from app.config.config import AppConfig
 #     cfg = AppConfig()
 
 #     ip = cfg.get("NVR","IP")
+#     port = cfg.get("NVR", "PORT", cast=int)
 #     username = cfg.get("NVR", "USERNAME")
 #     password = cfg.get("NVR", "PASSWORD")
 
+#     hik = HikvisionSDK(
+#         nvrs=[{
+#             "ip": ip,
+#             "port": port,
+#             "username": username,
+#             "password": password
+#         }]
+#     )
+
 #     print(f"""
 #             NVR IP: {ip}\n
+#             NVR PORT: {port}\n
 #             NVR USERNAME: {username}\n
 #             NVR PASSWORD: {password}\n
 #             """)
@@ -180,7 +257,8 @@ def get_camera_channel(
 #     build_camera_channel_mapping(
 #         nvr_ip=ip,
 #         username=username,
-#         password=password
+#         password=password,
+#         sdk=hik
 #     )
 
     
