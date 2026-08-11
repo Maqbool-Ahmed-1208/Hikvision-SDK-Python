@@ -54,6 +54,7 @@ Designed for production computer vision systems where thousands of frame capture
 │   │   │   ├── PlayCtrl.dll
 │   │   │   └── ...
 │   │   │
+│   │   ├── sdk_wrapper.py
 │   │   ├── hikvision_sdk.py
 │   │   └── nvr_camera_channel_mapping.py
 │   │
@@ -102,6 +103,8 @@ Example
 ```ini
 [PATHS]
 ROOT = Hikvision-SDK-Python # Modify it, if needed.
+HCNetSDK = app\hikvision_sdk_package\bin\HCNetSDK.dll
+CHANNEL_MAPPING_PATH = app\config\camera_channel_mapping.json
 
 [NVR]
 IP = 192.168.100.10
@@ -116,7 +119,8 @@ PASSWORD = your_password
 
 | Module                          | Description                 |
 | ------------------------------- | --------------------------- |
-| `hikvision_sdk.py`              | Main SDK wrapper            |
+| `sdk_wrapper.py`                | Main SDK wrapper            |
+| `hikvision_sdk.py`              | SDK features                |
 | `nvr_camera_channel_mapping.py` | Camera IP ↔ Channel mapping |
 | `helper_functions.py`           | Utility functions           |
 | `playback_extractor.py`         | GUI based Playback extractor|

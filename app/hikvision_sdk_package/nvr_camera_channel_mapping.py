@@ -3,15 +3,20 @@ import xml.etree.ElementTree as ET
 from requests.auth import HTTPDigestAuth
 import json
 import os, sys
-# sys.path.append(".")
+sys.path.append(".")
 from app.utils.helper_functions import load_json
+from app.config.config import AppConfig
+
+cfg = AppConfig()
+
+CHANNEL_MAPPING_PATH = cfg.get("PATHS", "CHANNEL_MAPPING_PATH")
 
 
 def build_camera_channel_mapping(
     nvr_ip: str,
     username: str,
     password: str,
-    output_file: str = r"app\config\camera_channel_mapping.json",
+    output_file: str = CHANNEL_MAPPING_PATH,
     timeout: int = 10
 ):
 
@@ -129,32 +134,32 @@ def build_camera_channel_mapping(
             "error": str(e)
         }
 
+
 def get_camera_channel(
     nvr_ip,
     camera_ip,
-    nvr_channel_mappings_path = r"app\config\camera_channel_mapping.json"
+    nvr_channel_mappings_path = CHANNEL_MAPPING_PATH
 ):
     nvr_channel_mappings = load_json(nvr_channel_mappings_path)
 
+    # Normalize NVR key
     nvr_key = nvr_ip.replace(".", "")
 
-    nvr_mapping = nvr_channel_mappings.get(
-        nvr_key
-    )
+    # Normalize camera IP
+    if camera_ip:
+        match = re.search(r"\d{1,3}(?:\.\d{1,3}){3}", camera_ip)
+        if match:
+            camera_ip = match.group(0)
 
+    nvr_mapping = nvr_channel_mappings.get(nvr_key)
     if not nvr_mapping:
         return None
 
-    camera_mapping = nvr_mapping.get(
-        camera_ip
-    )
-
+    camera_mapping = nvr_mapping.get(camera_ip)
     if not camera_mapping:
         return None
 
-    return camera_mapping.get(
-        "channel"
-    )
+    return camera_mapping.get("channel")
 
 
 # if __name__ == "__main__":

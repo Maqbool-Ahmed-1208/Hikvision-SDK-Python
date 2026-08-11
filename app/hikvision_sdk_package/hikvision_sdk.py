@@ -1,4 +1,4 @@
-import os, sys
+
 import cv2
 import time
 import tempfile
@@ -6,100 +6,19 @@ import threading
 import datetime
 import numpy as np
 from ctypes import *
+import os, sys
+sys.path.append(".")
+from app.hikvision_sdk_package.sdk_wrapper import (NET_DVR_DEVICEINFO_V30, NET_DVR_JPEGPARA, 
+                                               NET_DVR_PREVIEWINFO, NET_DVR_TIME, 
+                                               NET_DVR_PLAYCOND, REALDATACALLBACK,
+                                               DISPLAYCBFUN)
+from app.config.config import AppConfig
 
-class NET_DVR_DEVICEINFO_V30(Structure):
-    _fields_ = [
-        ("sSerialNumber", c_byte * 48),
-        ("byAlarmInPortNum", c_byte),
-        ("byAlarmOutPortNum", c_byte),
-        ("byDiskNum", c_byte),
-        ("byDVRType", c_byte),
-        ("byChanNum", c_byte),
-        ("byStartChan", c_byte),
-        ("byAudioChanNum", c_byte),
-        ("byIPChanNum", c_byte),
-        ("byZeroChanNum", c_byte),
-        ("byMainProto", c_byte),
-        ("bySubProto", c_byte),
-        ("bySupport", c_byte),
-        ("bySupport1", c_byte),
-        ("bySupport2", c_byte),
-        ("wDevType", c_ushort),
-    ]
+cfg = AppConfig()
 
+SDK_PATH = cfg.get("PATHS", "HCNetSDK")
 
-class NET_DVR_JPEGPARA(Structure):
-    _fields_ = [
-        ("wPicSize", c_ushort),
-        ("wPicQuality", c_ushort),
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Live view / real play structures — mirrors the C# reference
-# (CHCNetSDK.NET_DVR_PREVIEWINFO / NET_DVR_RealPlay_V40 / NET_DVR_StopRealPlay)
-# ---------------------------------------------------------------------------
-
-class NET_DVR_PREVIEWINFO(Structure):
-    _fields_ = [
-        ("lChannel", c_long),           # lChannel Preview device channel
-        ("dwStreamType", c_uint),       # 0-main stream,1-sub stream,2-third stream,3-transcode stream
-        ("dwLinkMode", c_uint),         # 0-TCP,1-UDP,2-multicast,3-RTP,4-RTP/RTSP,5-RSTP/HTTP
-        ("hPlayWnd", c_void_p),         # window handle for local rendering (None/0 for headless)
-        ("bBlocked", c_uint),           # 0-non-blocking,1-blocking
-        ("bPassbackRecord", c_uint),
-        ("byPreviewMode", c_byte),
-        ("byStreamID", c_byte * 32),
-        ("byProtoType", c_byte),
-        ("byRes1", c_byte),
-        ("byVideoCodingType", c_byte),
-        ("dwDisplayBufNum", c_uint),
-        ("byNPQMode", c_byte),
-        ("byRes", c_byte * 215),
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Playback-by-time structures (NET_DVR_PlayBackByTime)
-# ---------------------------------------------------------------------------
-
-class NET_DVR_TIME(Structure):
-    _fields_ = [
-        ("dwYear", c_uint),
-        ("dwMonth", c_uint),
-        ("dwDay", c_uint),
-        ("dwHour", c_uint),
-        ("dwMinute", c_uint),
-        ("dwSecond", c_uint),
-    ]
-
-
-class NET_DVR_PLAYCOND(Structure):
-    _fields_ = [
-        ("dwChannel", c_uint),
-        ("struStartTime", NET_DVR_TIME),
-        ("struStopTime", NET_DVR_TIME),
-        ("byDrawFrame", c_byte),   # 0-non key frame, 1-key frame only
-        ("byRes", c_byte * 63),
-    ]
-
-
-# void CALLBACK RealDataCallBack(LONG lRealHandle, DWORD dwDataType, BYTE *pBuffer, DWORD dwBufSize, void* dwUser)
-REALDATACALLBACK = WINFUNCTYPE(
-    None, c_long, c_uint, POINTER(c_ubyte), c_uint, c_void_p
-)
-
-# --- PlayCtrl.dll (PlayM4_*) decode bindings ---
-# void CALLBACK DecCBFun(int nPort, char *pBuf, int nSize, FRAME_INFO *pFrameInfo, void *nUser, int nReserved)
-# We use the simpler display callback variant which hands back a ready RGB24
-# buffer: void CALLBACK DispCBFun(int nPort, char *pBuf, int nSize, int nWidth,
-#                                  int nHeight, int nStamp, int nType, int nReserved0, int nReserved1)
-DISPLAYCBFUN = WINFUNCTYPE(
-    None, c_long, POINTER(c_ubyte), c_long, c_long, c_long,
-    c_long, c_long, c_long, c_long
-)
-
-STREAME_REALTIME = 0  # PlayM4_SetStreamOpenMode mode: live/realtime stream
+STREAM_REALTIME = 0  # PlayM4_SetStreamOpenMode mode: live/realtime stream
 
 # NET_DVR_PlayBackControl_V40 command code we use
 NET_DVR_PLAYSTART = 1
@@ -110,7 +29,7 @@ class HikvisionSDK:
     def __init__(
         self,
         nvrs: list,
-        sdk_path=r"app\hikvision_sdk_package\bin\HCNetSDK.dll"
+        sdk_path=SDK_PATH
     ):
 
         self.sdk_path = sdk_path
@@ -610,7 +529,7 @@ class HikvisionSDK:
                     use_decode = False
                 else:
                     ok_mode = self.play_ctrl.PlayM4_SetStreamOpenMode(
-                        port, STREAME_REALTIME
+                        port, STREAM_REALTIME
                     )
                     print(
                         f"[SDK] PlayM4_SetStreamOpenMode -> {bool(ok_mode)} "
