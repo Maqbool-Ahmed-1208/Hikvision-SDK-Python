@@ -2,7 +2,7 @@ import requests
 import xml.etree.ElementTree as ET
 from requests.auth import HTTPDigestAuth
 import json
-import os, sys
+import os, sys, re
 sys.path.append(".")
 from app.utils.helper_functions import load_json
 from app.config.config import AppConfig
