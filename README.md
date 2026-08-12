@@ -62,6 +62,7 @@ Designed for production computer vision systems where thousands of frame capture
 │       └── helper_functions.py
 │
 ├── run_examples/
+│   ├── generate_camera_channel_mapping.bat
 │   └── run_playback_extractor.bat
 │
 ├── LICENSE
