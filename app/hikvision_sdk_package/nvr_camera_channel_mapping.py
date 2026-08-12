@@ -580,44 +580,44 @@ def get_camera_channel(
     return camera_mapping.get("channel")
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
-#     from app.config.config import AppConfig
-#     cfg = AppConfig()
+    from app.hikvision_sdk_package.hikvision_sdk import HikvisionSDK
+    from app.config.config import AppConfig
+    cfg = AppConfig()
 
-#     ip = cfg.get("NVR","IP")
-#     port = cfg.get("NVR", "PORT", cast=int)
-#     username = cfg.get("NVR", "USERNAME")
-#     password = cfg.get("NVR", "PASSWORD")
+    ip = cfg.get("NVR","IP")
+    port = cfg.get("NVR", "PORT", cast=int)
+    username = cfg.get("NVR", "USERNAME")
+    password = cfg.get("NVR", "PASSWORD")
 
-#     hik = HikvisionSDK(
-#         nvrs=[{
-#             "ip": ip,
-#             "port": port,
-#             "username": username,
-#             "password": password
-#         }]
-#     )
+    hik = HikvisionSDK(
+        nvrs=[{
+            "ip": ip,
+            "port": port,
+            "username": username,
+            "password": password
+        }]
+    )
 
-#     print(f"""
-#             NVR IP: {ip}\n
-#             NVR PORT: {port}\n
-#             NVR USERNAME: {username}\n
-#             NVR PASSWORD: {password}\n
-#             """)
+    print(f"""
+            NVR IP: {ip}\n
+            NVR PORT: {port}\n
+            NVR USERNAME: {username}\n
+            NVR PASSWORD: {password}\n
+            """)
     
-#     build_camera_channel_mapping(
-#         nvr_ip=ip,
-#         username=username,
-#         password=password,
-#         sdk=hik
-#     )
+    build_camera_channel_mapping(
+        nvr_ip=ip,
+        username=username,
+        password=password,
+        sdk=hik
+    )
 
     
-#     channel = get_camera_channel(
-#     nvr_ip=ip,
-#     camera_ip="192.168.100.116",
-#     )
+    # channel = get_camera_channel(
+    # nvr_ip=ip,
+    # camera_ip="192.168.100.116",
+    # )
 
-#     print(channel)
+    # print(channel)
