@@ -1033,6 +1033,7 @@ class HikvisionSDK:
                 # err==4 (NET_DVR_CHANNEL_ERROR) is the expected "not a
                 # real channel" response — anything else is worth noting
                 if err != 4:
+                    working.append(ch)
                     print(f"[SDK] channel {ch}: failed, err={err} (not the usual channel-error code)")
 
             time.sleep(0.05)
