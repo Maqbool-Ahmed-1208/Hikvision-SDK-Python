@@ -565,7 +565,7 @@ def get_camera_channel(
 
     # Normalize camera IP
     if camera_ip:
-        match = re.search(r"\d{1,3}(?:\.\d{1,3}){3}", camera_ip)
+        match = re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", camera_ip)
         if match:
             camera_ip = match.group(0)
 

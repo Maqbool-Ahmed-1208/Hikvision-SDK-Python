@@ -216,7 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
+*.ipynb_checkpoints
+*.ipynb
 *.cfg
 *.json
 *hikvision_demo
